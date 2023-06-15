@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+
+<html>
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <title>muraterdem.org</title>
+        <meta name="keywords" content="exploitation, malware analysis, reverse engineering, mobile security, cyber security, programing, operation systems, linux, windows, android, information security,research">
+        <meta name="description" content="this blog contains my writes about reverse engineering, mobile security, exploitation, ASM, etc ">
+        <link rel="stylesheet" href="../../css/main.css"  >
+        
+    </head>
+    <body>
+        <div id="page_area">
+            <header>
+                <div>
+                    <h1 class="title">Murat ERDEM - Personal Research Blog</h1>
+                    <a class="social" href="https://www.linkedin.com/in/erdemmurat/">
+                        <img src="../../assets/linkedin.png">
+                    </a>
+                    <a class="social" href="https://github.com/moncasp">
+                        <img src="../../assets/github.png">
+                    </a>
+                </div>
+                <br><hr><br>
+            </header>
+
+            <section>
+                <div>
+                    <h1><b>Assembly Programing - 0x02: Emu8086</b></h1>
+                    <h5>August 25, 2020</h5>
+
+                    <p>Bu yazımızda assembly ile kodlama yaparken kullanacağımız emu8086 yazılımını tanıyacağız.</p>
+                    <p>Assemblyde kod yazmanın ve çalıştırmanın farklı yöntemleri var ben en kullanışlı olduğunu düşündüğüm ve hafızada dönen olayları görebildiğim için emu8086 üzerinde kodlama yapıyorum bu serimizde bunun üzerinden gideceğiz.</p>
+                    <figure>
+                        <img src="../../assets/posts/assembly_programing/8086_opened-1024x432.png">
+                    </figure>
+                    <p>8086’yı ilk çalıştırdığımızda yukarıdaki gibi bir pencere bizi karşılamaktadır. Burada bir proje oluşturmak için new butonuna tıkladığımızda aşağıdaki pencere açılmaktadır.</p>
+                    <figure>
+                        <img src="../../assets/posts/assembly_programing/create_project_8086.png">
+                    </figure>
+                    <p>Burada boş bir proje oluşturalım. Karşımıza tamamen boş bir sayfa çıkacaktır bu sayfada assembly kodlarımızı yazacağız. Bu sayfanın genel yapısı aşağıdaki gibi olmalıdır.</p>
+                    <figure>
+                        <img src="../../assets/posts/assembly_programing/8086_yapi.png">
+                    </figure>
+
+                    <h5>.model</h5>
+                    <p>Bu tanımlama bellek tipini belirtir, tiny, small, medium, large, huge değerlerini alır.</p>
+
+                    <h5>.stack</h5>
+                    <p>stack büyüklüğünü belirtir, 16, 32 ve 64 gibi değerler belirtir.</p>
+
+                    <h5>.data</h5>
+                    <p>Data segment tanımlaması yapar buradan bir sonraki segment tanımlamasına kadar olan adres data segment olarak tanımlanır. İçerisine sabit veriler tanımlanır.</p>
+
+                    <h5>.code</h5>
+                    <p>Code segment tanımlamasıdır, içerisinde programın çalıştırılabilir kodları bulunur.</p>
+
+                    <h5>.startup</h5>
+                    <p>Bu komut ds in adresini tanımlar. Bu komut aslında aşağıdaki ile aynıdır. Aşağıdaki komutta bilmemiz gereken kısım “@data” tanımlaması data segmentin adresini tutan değişkendir.</p>
+
+<pre>       
+    <code>
+        mov ax,@data
+        mov ds,ax
+    </code>
+</pre>
+                    <h5>.exit</h5>
+                    <p>Bu tanımlama programdan çıkmak için kullanılır.</p>
+
+                    <h5>end</h5>
+                    <p>Bizim programımız bir emülatör üzerinde çalıştığı için “end” tanımlaması emülatörden çıkmak için kullanılır.</p>
+
+
+                    <h3>Emu8086 Araçları</h3>
+                    <p>8086’yı kullanma sebebimiz aslında bize sağladığı bazı araçlardır. Aşağıdaki resme bakacak olursak bazı araçların bizim için önemli olduğunu görebiliriz.</p>
+                    <figure>
+                        <img src="../../assets/posts/assembly_programing/8086_menu.png">
+                    </figure>
+                    <p>Burada bizim için “calculator” önemlidir, biz daha çok hex ve binary sayılar ile uğraşacağımız için anlamak açısından bunları bir birine yada decimal değere dönüştürmek isteyebiliriz. Bu noktada bu araç bize yardımcı olacaktır. Bizim için buradaki aslı önemli olan ise “emulate”dir. Bu bizim programın yürütülmesi, debug edilmesi, ve hafızdaki işlemleri takip etmemizi sağlar.</p>
+
+                    <h5>calculator</h5>
+                    <p>ilk açtığımızda aşağıdaki ekran gösterilmektedir. burada üst taraftan gireceğimiz değerin neye dönüştürülmesini istersek onu seçiyoruz. Aşağıda ise giriş değerini veriyoruz.eğer giriş değerimiz ikili sayı sisteminde ise sonuna “b”, sekizlik ise sonuna “o”, on altılık ise sonuna “h” harfini yazarız. onluk sistemde ise herhangi bir harfe gerek yoktur.</p>
+                    <figure>
+                        <img src="../../assets/posts/assembly_programing/8086_calculater.png">
+                    </figure>
+
+                    <h3>Emulator</h3>
+                    <p>“emulate” butonuna bastığımızda iki adet pencere açılır birisi yazdığımız kaynak kodda hangi satırın işleneceğini takip etmemizi sağlayan penceredir. Bu pencerede işlenecek bir sonraki adım sarı ile işaretlenir.</p>
+                    <p>Bir diğer penceremiz ise emülatör penceresidir aşağıdaki gibi görünür.</p>
+                    <figure>
+                        <img src="../../assets/posts/assembly_programing/8086_emulator.png">
+                    </figure>
+                    <p>Bu pencerede sol tarafta registerler içerisindeki değerleri görebiliriz. program işlendiğinde buradaki değerler anlık olarak değişmektedir. orta tarafta ise assembly komutlarını ve her komutun hex karşılığını görebiliriz. bu pencerelerin yukarısında ise 0712 adresini görmekteyiz. Burada dikaktimizi çeken nokta bunun registerlerdeki CS ile aynı adresi gösterdiğidir burada emulatör cs’in başlangıç noktasında kodlarımızı işlemek için hazır durumdadır.</p>
+                    <p>Alt kısımda ise bizim program esnasında penceredeki değişiklikleri takip etmek için bir pencere açan “screen”, kanyak kodumuzun penceresini açan “source” , emülatörü baştan başlatan “reset”, programlarda kullanılan değişkenleri görebileceğimiz “vars”, debug loglarını görebileceğimiz “debug”, stackda bulun verileri izleyebileceğimiz “stack” ve flag değerlerini görüp set edebileceğimiz “flags” butonlarını görmekteyiz.</p>
+                    <p>Bu butonlar haricinde “aux” butonu bizim için önemli yer tutmaktadır. Bu buton içerisinde iki adet önemli aracımız vardır. Bİrisi stop on condition diğeri memory. Stopn on codition bir registerin değeri istediğimiz bir şartı sağladığında programı stop etmemiziz sağlar. memory ise memory üzerindeki değerleri dump etmemizi anlık olarak değişiklikleri izlememiz sağlar.</p>
+
+                </div>
+            </section>
+        </div>
+    </body>
+</html>

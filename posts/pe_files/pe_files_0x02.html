@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+
+<html>
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <title>muraterdem.org</title>
+        <meta name="keywords" content="exploitation, malware analysis, reverse engineering, mobile security, cyber security, programing, operation systems, linux, windows, android, information security,research">
+        <meta name="description" content="this blog contains my writes about reverse engineering, mobile security, exploitation, ASM, etc ">
+        <link rel="stylesheet" href="../../css/main.css"  >
+        
+    </head>
+    <body>
+        <div id="page_area">
+            <header>
+                <div>
+                    <h1 class="title">Murat ERDEM - Personal Research Blog</h1>
+                    <a class="social" href="https://www.linkedin.com/in/erdemmurat/">
+                        <img src="../../assets/linkedin.png">
+                    </a>
+                    <a class="social" href="https://github.com/moncasp">
+                        <img src="../../assets/github.png">
+                    </a>
+                </div>
+                <br><hr><br>
+            </header>
+
+            <section>
+                <div>
+                    <h1><b>PE Files - 0x02</b></h1>
+                    <h5>July 19, 2020</h5>
+                    <p>Bir önceki yazımızda temel kavramlardan bahsetmiştik.Burada ise artık PE dosyalarının yapısına ve içerisinde sakladığı bilgilere erişmek ve işleyebilmek için kodlama kısmına bakacağız. İlk olarak Belirtmek gerekirse ben PE dosyalarının içerisindeki bilgilere erişmek için kodlarımızı c++ programlama dili kullanarak yazacağız. Yazdığımız bu kodları <a href="https://github.com/moncasp/PE_Parser">github</a> üzerinden ulaşabilirsiniz.</p>
+                    <p>İlk işlem olarak boş bir cpp projesi oluşturup içerisine iostream, Windows.h ve locale.h kütüphanelerinin dahil edildiğinden emin olalım. Daha sonra main fonksiyonuna aşağıdaki kod parçasını ekleyerek Türkçe harflerin desteklenmesini sağlıyoruz</p>
+<pre>
+    <code>
+        #include <iostream>
+        #include <Windows.h>
+        #include <locale.h>
+        using namespace std;
+
+        int main(int argc, char* argv[])
+        {
+            setlocale(LC_ALL, "Turkish");
+            return 0;
+        }
+    </code>
+</pre>
+                    <p>
+                        Şimdi ihtiyacımız olan çalışma alanını ayarladıktan sonra asıl konumuz olan PE dosyalarını parçalama kısmına giriş yapabiliriz. Daha önceki bölümlerde bahsettiğimiz gibi windows işletim sisteminde bir exe çalışırken önce hafızaya yüklenir daha sonra çalışırdı bizim yazacağımız kodlar da aslında hafıza üzerinde çalışacağı için üzerinde işlem yaparak bilgilerini alacağımız PE dosyamızı da hafızaya almamız gerekmekte. Bunun için ilk öncelikle hedef dosyamızın handle değerini almamız gerekmekte, Handle değeri en basit ifade ile bizim PE dosyamıza erişimimizi sağlayan bir tanıtıcıdır. Ben bu kodları yazarken microsoftun bizleri için hazırlamış olduğu dokümanlardan yararlanmaktayım. Sizin aklınıza takılan herhangi bir yer olursa kullandığım API’lerin detaylı anlatımını bu dokümanlarda bulabilirsiniz.
+                    </p>       
+
+<pre>
+    <code>
+            #include <iostream>
+            #include <Windows.h>
+            #include <locale.h>
+            using namespace std;
+            
+            int main(int argc, char* argv[])
+            {
+                setlocale(LC_ALL, "Turkish");
+                HANDLE fileHandle;
+            
+                if (argc == 1) {
+                    cout << "PE dosyası bulunamadı\n";
+                    return 0;
+                }
+            
+                cout << "dosya parçalanıyor: " << argv[1] << endl;
+            
+                fileHandle = CreateFileA(argv[1], GENERIC_READ, 0, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+                if (fileHandle == INVALID_HANDLE_VALUE) {
+                    if (GetLastError() == 2) {
+                        cout << "Dosya Bulunamadı." << endl;
+                    }
+                    else {
+                        cout << "Dosya açma işlemi başarısız. Hata kodu: " << GetLastError();
+                    }
+                    return 0;
+                }
+            
+                return 0;
+            }
+            
+    </code>
+</pre>
+                    <p>
+                        Burada öncelikle HANDLE veri tipinde bir fileHandle değişkeni oluşturduk. Daha sonra bana parametre olarak dosya ismi gönderilmiş mi kontrol etmek için küçük bir if kontrolü koyduk burada argc değişkeni bize dışarıdan gönderilen parametre sayısını gösterir eğer bir tane ise sadece dosyanın kendisi vardır ve hiç bir parametre girilmemiştir.
+                    </p>
+                    <p>
+                        argv dizisi dışarıdan hangi parametrelerin girildiğini gösterir bunun da ilk indisi yani argv[0] değeri programın kendisi daha sonrakiler ise parametre olarak gönderilen değerlerdir. Bu nedenle CreateFileA API’si kullanarak dosyaya bir handle değeri almaya çalıştık ve içerisine dosya yolu olarak argv[1] değerini verdik. CreateFileA fonksiyonu bize eğer bir hata oluşmuş ise “INVALID_HANDLE_VALUE” değerini dönmektedir GetLastError fonksiyonu ise son oluşan hatanın hata kodunu bize gösterir. Eğer bu hata kodu 2 değerine eşit ise dosyanın bulunamadığı anlamına gelmektedir.
+                    </p>
+                    <p>
+                        Bu ana kadar sadece bilgilerini öğrenmek istediğimiz PE dosyamıza erişim için gerekli işlemleri yaptık, bizim bu dosyayı kendi prosesimizin bellek alanına yüklememiz gerekmekte bunun için aşağıdaki kodları kullanabiliriz.
+                    </p>
+<pre>
+    <code>
+        DWORD fileSize = GetFileSize(fileHandle, NULL);
+
+        LPVOID fileData = HeapAlloc(GetProcessHeap(), 0, fileSize);
+            
+        if (fileData == NULL) {
+            cout << "Doya için Hafızada Yer Ayrılamadı." << endl;
+        }
+
+        DWORD bytesRead;
+
+        ReadFile(fileHandle, fileData, fileSize, &bytesRead, NULL);
+    </code>
+</pre>                  
+
+                    <p>
+                        Burada yaptığımız ilk iş bizim PE dosyamızın boyutunu bulmak, Bu boyutu daha sonra dosyamızı hafızaya yüklerken ne kadarlık bir bellek alanına ihtiyacımız olduğunu anlamak için kullanacağız. GetFileSize fonksiyonu bize handle değeri verilen dosyanın boyutunu DWORD tipinde dönmektedir. İlk parametre olarak fileHandle değerinin ikinci parametre olarak NULL değerini verebiliriz.
+                    </p>
+                    <p>
+                        HeapAlloc fonksiyonu bellek alanından yer ayırmak için kullanılan fonksiyondur fileSize boyutunda kendi bellek alanımızdan yer ayırmasını istedik, fonksiyon ise bize eğer başarılı ise LPVOID veri tipinde bizim için ayırdığı alanın başlangıç adresini gösteren bir pointer değeri dönecektir ama başarısız ise NULL değer döner. Biz bu fonksiyondan sonra küçük bir kontrol daha koyarak fonksiyonun düzgün bir şekilde çalışıp çalışmadığını kontrol ettik.
+                    </p>
+                    <p>
+                        En son olarak ReadFile API’sini kullanarak belleğimizde ayırdığımız alana PE dosyamızı yükledik.
+                    </p>
+                    <p>
+                        Daha sonraki bölümlerde PE dosyamızı parçalayarak içerisindeki verilere birlikte göz atacağız.
+                    </p>
+                    
+                </div>
+            </section>
+        </div>
+    </body>
+</html>

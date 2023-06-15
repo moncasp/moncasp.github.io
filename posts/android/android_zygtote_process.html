@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+
+<html>
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <title>muraterdem.org</title>
+        <meta name="keywords" content="exploitation, malware analysis, reverse engineering, mobile security, cyber security, programing, operation systems, linux, windows, android, information security,research">
+        <meta name="description" content="this blog contains my writes about reverse engineering, mobile security, exploitation, ASM, etc ">
+        <link rel="stylesheet" href="../../css/main.css"  >
+        
+    </head>
+    <body>
+        <div id="page_area">
+            <header>
+                <div>
+                    <h1 class="title">Murat ERDEM - Personal Research Blog</h1>
+                    <a class="social" href="https://www.linkedin.com/in/erdemmurat/">
+                        <img src="../../assets/linkedin.png">
+                    </a>
+                    <a class="social" href="https://github.com/moncasp">
+                        <img src="../../assets/github.png">
+                    </a>
+                </div>
+                <br><hr><br>
+            </header>
+
+            <section>
+                <div>
+                    <h1><b>Android System And Zygote Process</b></h1>
+                    <h5>July 21, 2020</h5>
+
+                    <p>Bu yazıda android işletim sisteminin çalışmaya başlamasından, bir uygulamanın nasıl başlatıldığından ve zygote prosesinden bahsedeceğiz.</p>
+                    <p>Öncelikle tamamen kapalı bir telefonun açma tuşuna bastığımızda neler olduğuna bakalım.</p>
+                    <p>Bir android sistem ilk başlatılırken arka planda gerçekleşen olaylar aşağıdaki gibidir.</p>
+                    <figure>
+                        <img src="../../assets/posts/android/android_zygote_process/andorid_start.png">
+                        <figcaption>(Sistemin başlatılması)</figcaption>
+                    </figure>
+
+                    <h3>Bootrom</h3>
+                    <p>Bu küçük parça işlemci içerisine yerleştirilmiş yazma korumalı küçük bir rom bellek parçasıdır. Görevi ise bootloaderi başlatmaktır.</p>
+                    <h3>Bootloader</h3>
+                    <p>Görevi çekirdek başlatılmadan önce sistem dosyalarının çalışma alanına yüklemektir.</p>
+                    <h3>Kernel</h3>
+                    <p>Kernel kurulum önbelleği, korumalı belleği ve sürücüleri yüklemek gibi görevleri üstlenir. Kısaca görevi sistem kurulumunu yapmaktır diyebiliriz. Bu işlemlerden sonra kernel dosyalardaki init fonksiyonlarını çalıştırarak ilk işlemleri yapmış olur.</p>
+                    <h3>Init</h3>
+                    <p>Init fonksiyonunun iki görevi vardır. Birisi dev, sys, proc gibi dizinleri bağlamak, diğeri Service Manager gibi işlemleri başlatan init.rc scriptini başlatmaktır. Zygote Proseste bu aşamada başlarılır.</p>
+                    <h3>Dalvik</h3>
+                    <p>Dalvik bir sanal makinedir. Uygulamaları dalvik tam zamanında derleme yaparlar.</p>
+                    <h3>Zygote Proses</h3>
+                    <p>Android sistemde her uygulama kendi dalvik sanal makinesi içerisinde çalışır. Buna kendi containeri de diyebiliriz. Ana zygote prosesin görevi uygulamalar tarafında kullanılacak olan temel java kütüphanelerini bellek üzerine yüklemek ve ilgili uygulamaların bu kütüphaneleri kullanımını yönetmektir. Android sistemi zygote prosesin main fonksiyonunu çağırarak bu işlemlerin gerçekleştirilmesini sağlar.</p>
+                    <p>Her yeni zygote işlemi ana zygotenin bir alt prosesidir. Bir uygulama başlatılacağında ana zygote den kendini kopyalayarak kendi container yapısına sahip olur.</p>
+                    <p>Bir uygulama başlatılırken ana zygote prosesinden kullanacağı java kütüphanelerine nasıl erişeceğini gösteren bir map alır.Tüm uygulamalar ortak kaynak kullandığı ve bütün java sınıflarını kendi içine kopyalamadığı için sistem performans kazanmış olur.</p>
+                    <p>Ana zygote Activity Managerden uygulama başlatma isteği almadan önce sistem serveri başlatır.</p>
+                    <h3>System Server</h3>
+                    <p>System server zigot tarafından başlatılan ilk prosestir ve başlatıldıktan sonra ayrı bir proses olarak yaşar. En önemli görevlerinden birisi System Managere başlatılan her uygulamayı yazmak ve Activity Manageri başlatmaktır.</p>
+                    <h3>Activity Manager</h3>
+                    <p>Activity Manager uygulamaların arayüzleri ile ilgili işlemleri yöneten servistir.</p>
+
+                    <h2>Uygulama İconuna Tıklanıldığında</h2>
+                    <p>Burada zygote prosese biraz ara verip telefon penceresinde bulunan bir uygulamanın ikonuna tıklanıldığında arka planda gerçekleşen olaylara bakalım.</p>
+                    <figure>
+                        <img src="../../assets/posts/android/android_zygote_process/app_start.png">
+                        <figcaption>(Application başlatılması)</figcaption>
+                    </figure>
+                    <p>Bir uygulamanın ikonuna tıklanıldığında bu olay bir intente (Start Activitye) dönüştürülür. Binder IPC aracılığı ile ActivityManagerService yönledirilir burada aşağıdaki işlemler yapılır.</p>
+                    <p>İlk olarak ıntent nesnesi hakkında bilgi toplamaktır. Bu işlemi PackageManager resolIntent methodu ile yapılmaktadır.</p>
+                    <p>İkinci aşamada ise istenilen uygulama için kullnıcının gerekli izinlere sahip olup olmadığını kontrol etmek için grandUriPermissionLocked fonksiyonu çağrılır.</p>
+                    <p>Üçüncü aşamada kullanıcı yeterli izinlere sahip ise ActivityManagerService de başlatılan uygulamanın yeni bir container içerisinde başlatılıp başlatılmayacağını denetler. Bİr uygulama diğer uygulamalar tarafında çağrılarak diğer uygulamanın containeri içersinde basit olarak çalıştırılabilir. Bu denetimi yaparken FLAG_ACTIVITY_NEW_TASK ve FLAG_ACTIVITY_CLEAR_TOP gibi flaglardan faydalanır.</p>
+                    <p>Bu aşamadan sonra ProcesRecord boş ise Activity Manager servisin için yeni bir proses oluşması gerekir. Application başlatılmasını gösteren resmimiz de olduğu gibi bunun üç safhası vardır.</p>
+                    <h3>Process Create</h3>
+                    <p>İlk safhada ActivivtyManagerService soket bağlantısı üzerinden Zygote prosesine argüman gönderen startProcessLocked methodunu çağırarak yeni bir proses oluşmasını sağlar. Zygote yukarıda bahsettiğimiz gibi kendini kopyalar ve Activity Thread nesnesi oluşturan ve yeni bir proses id oluşturan ZygoteInt.main fonksiyonunu çağırır.</p>
+                    <p>Her proses kendi iletilerinin yönetilmesi için bir Looper nesnesine sahiptir her tetiklendiğinde Looper.loop() öğresini çağrılır.</p>
+                    <h3>Application Binding</h3>
+                    <p>İkinci safhada yeni oluşturulan prosese uygulamayı eklemektir. Bu işlem bindApplication fonsiyonu ile yapılır bu fonksiyon İleti sırasına BIND_APPLICATION mesajını göndererek makeApplication fonksiyonunun tetiklenmesini ve uygulama claslarını zygote tarafından oluşturulan containerin hafızasına yüklenmesini sağlar.</p>
+                    <h3>Launch an Activity</h3>
+                    <p>Son safhada ise realStartActivity fonksiyonu ile ileti sırasına LAUNCH_ACTIVITY mesajı gönderilir. Bu mesaj handleLaunchActivity ile işlenerek uygulamadaki onCreate methodu başlatılır.</p>
+                </div>
+            </section>
+        </div>
+    </body>
+</html>

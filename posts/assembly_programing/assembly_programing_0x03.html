@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+
+<html>
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <title>muraterdem.org</title>
+        <meta name="keywords" content="exploitation, malware analysis, reverse engineering, mobile security, cyber security, programing, operation systems, linux, windows, android, information security,research">
+        <meta name="description" content="this blog contains my writes about reverse engineering, mobile security, exploitation, ASM, etc ">
+        <link rel="stylesheet" href="../../css/main.css"  >
+        
+    </head>
+    <body>
+        <div id="page_area">
+            <header>
+                <div>
+                    <h1 class="title">Murat ERDEM - Personal Research Blog</h1>
+                    <a class="social" href="https://www.linkedin.com/in/erdemmurat/">
+                        <img src="../../assets/linkedin.png">
+                    </a>
+                    <a class="social" href="https://github.com/moncasp">
+                        <img src="../../assets/github.png">
+                    </a>
+                </div>
+                <br><hr><br>
+            </header>
+
+            <section>
+                <div>
+                    <h1><b>Assembly Programing - 0x03: Flag</b></h1>
+                    <h5>August 25, 2020</h5>
+
+                    <p>Bu yazımızda assembly programlamada işlenen komutun sonucu hakkında bilgi veren flaglara bakacağız.</p>
+                    <p>Assembly flaglar bir 32 bitlik bir registerde tutulur. bir komutun sonunda bu flag değerleri set edilir. Bu flaglara bakılarak if blokları gibi yapılar çalıştırılır. Flag registerinin yapısşı aşağıdaki gibidir.</p>
+                    <figure>
+                        <img src="../../assets/posts/assembly_programing/flags_reg.png">
+                    </figure>
+
+                    <h3>Carry Flag (CF)</h3>
+                    <p>Toplama işleminde elde, çıkarma işleminde borç ortaya çıkıyorsa cf 1 olarak set edilir. Kaydırma işlemlerinde MSB yada LSB bitinden düşen biti tutar. Ayrıca çarpma işlemlerinde sonuç göstericisi gibi hareket eder. Diğer durumlarda 0 durumundadır.</p>
+
+                    <h3>Parity Flag (PF)</h3>
+                    <p>Yapılan bir aritmetik işlem sonucunda sayının ikilik tabanındaki karşılığında 1 sayısı çift ise 1 tek ise o olarak set edilir.</p>
+
+                    <h3>Auxiliary Carry Flag (AF)</h3>
+                    <p>işaretsiz sayılar için 4 bitlik değer üzerinde taşma olduğunda 1 olarak set edilir.</p>
+
+                    <h3>Zero Flag (ZF)</h3>
+                    <p>Bir işlemin sonucu o ise zf 1 olarak set edilir, diğer durumlarda 0 dır.</p>
+
+                    <h3>Sign Flag (SF)</h3>
+                    <p>Yapılan aritmetik işleminin sonucu negatif ise sf 1 olarak set edilir.</p>
+
+                    <h3>Trap Flag (TF)</h3>
+                    <p>Debug işleminde komutların adım adım işlenmesi için kullanılır tf 1 olarak set edildiğinde komutlar adım adım işlenir.</p>
+
+                    <h3>Interrupt Enable Flag (IF)</h3>
+                    <p>IF 1 olarak set edildiğinde işlemci harici cihazlardan gelen kesmelere izin verir.</p>
+
+                    <h3>Direction Flag (DF)</h3>
+                    <p>Veri işleme işlemlerinde hareketin ileri yönlü (küçük adresten büyük adrese) yada geri yönlü (büyük adresten küçük adrese) olacağının kararını verir. DF 1 olarak set edilmiş ise geri yönlü, 0 olarak set edilmiş ise ileri yönlüdür.</p>
+
+                    <h3>Overflow Flag (OF)</h3>
+                    <p>Yapılan işlem sırasında herhangi bir hata ile karşılaşılırsa yada bellek taşması yaşanırsa OF 1 olarak set edilir.</p>
+
+                    <h3>I/O Privilage Level (IOPL)</h3>
+                    <p>korumalı mod işleminde I/O muafiyet düzeyinin seçilmesinde kullanılır. Eğer muafiyet düzeyi yüksek seçilmiş ise yada IOPL den daha güvenilirse I/O cihazı engele takılmadan çalışır.</p>
+
+                    <h3>Nested Task (NT)</h3>
+                    <p>Korumalı mod işleminde o anki görevin başka bir görev ile iç içe geçmesi durumunda NT 1 olarak set edilir.</p>
+
+                    <h3>Resume Flag (RF)</h3>
+                    <p>Debug işlemlerinde bir sonraki komuta devam edilmesi kontrolünde kullanılır.</p>
+
+                    <h3>Virtual Mode (VM)</h3>
+                    <p>Korumalı mod işleminde sanal mod seçilmesinde kullanılır. Sanal mod DOS sisteminde belleğin parçalara ayrılmasını sağlar.</p>
+
+                </div>
+            </section>
+        </div>
+    </body>
+</html>

@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+
+<html>
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <title>muraterdem.org</title>
+        <meta name="keywords" content="exploitation, malware analysis, reverse engineering, mobile security, cyber security, programing, operation systems, linux, windows, android, information security,research">
+        <meta name="description" content="this blog contains my writes about reverse engineering, mobile security, exploitation, ASM, etc ">
+        <link rel="stylesheet" href="../../css/main.css"  >
+        
+    </head>
+    <body>
+        <div id="page_area">
+            <header>
+                <div>
+                    <h1 class="title">Murat ERDEM - Personal Research Blog</h1>
+                    <a class="social" href="https://www.linkedin.com/in/erdemmurat/">
+                        <img src="../../assets/linkedin.png">
+                    </a>
+                    <a class="social" href="https://github.com/moncasp">
+                        <img src="../../assets/github.png">
+                    </a>
+                </div>
+                <br><hr><br>
+            </header>
+
+            <section>
+                <div>
+                    <h1><b>PE Files - 0x01</b></h1>
+                    <h5>July 14, 2020</h5>
+
+                    <p>
+                        Bu serimizde windows yürütülebilir
+                         dosyası olan PE headerine sahip dosyaların ne işe yaradığı çalışma mantıkları, yapısının nasıl olduğu ve nasıl parçalayabileceğimiz gibi konuları ele alacağız.
+                    </p>
+                    <p>
+                        Öncelikle windows işletim sistemlerinde çalışan bu yürütülebilir dosyalar üzerinde çift tıklandığında belirli işlemleri gerçekleştirmek amacıyla programlanırlar. Biz bu yazımızda bintext.exe uygulaması üzerinden PE dosyalarını anlamaya çalışacağız. Öncelikle bintext uygulaması bir dosya içerisindeki string ifadelerini çıkarmak için kullanılır.
+                    </p>
+                    <figure>
+                        <img src="../../assets/posts/pe_files/bintext.png">
+                    </figure>
+                    <p>
+                        Dosya yapılarına geçmeden önce PE dosyalarında çok kullanacağımız bazı temel terimler ve önemli bir araçtan bahsetmekte fayda var.
+                    </p>
+                    <h2>CFF Explorer</h2>
+                    <p>Bir exe dosyasının genel bilgisini almak için bir çok farklı araç kullanabiliriz CFF Explorer benim en çok kullandığım araçtır. Kendisi bir PE dosyası üzeride genel bilgileri, section bilgilerini ve kullanılan API bilgileri gibi bir çok bilgi sağlamaktadır. Bizim bu serimizde bu alanların ne anlama geldiklerini ve bilgilerin nasıl elde edildikleri konusuna değineceğiz.</p>
+                    <figure>
+                        <img src="../../assets/posts/pe_files/cff.png">
+                    </figure>
+                    <h2>Adresleme Methodu</h2>
+                    <p>
+                        PE dosyaları üzerinde çift tıklanıldığı andan itibaren sistem üzeriden hafızaya yüklenerek çalışmaya başlarlar. Burada önemli olan kısım bir dosyanın hafızada nasıl konumlandırılacağıdır.
+                    </p>
+                    <p>
+                        PE dosyaları içerisinde bulunan ve hangi adrese yükleneceğini gösteren adresler RVA (Relative Virual Address) adreslerdir. ve gerçek adresleri göstermezler. Göreceli adres olarak bilinirler ve değişkenlik gösterirler. RVA adresler sadece ilgili bölümün PE dosyamızın hafızaya yüklendiği başlangıç adresine olan uzaklığını gösterirler.
+                    </p>
+                    <p>   
+                        Bir uygulamanın hafızaya yüklendiği başlangıç adresi Image Base olarak adlandırılır ve bu adres kesinlik olmamak ile birlikte genel olarak 0x00400000 adresidir. PE dosyası içerisindeki bir adres hafıza üzerinde yüklendiğinde gerçek bir adrese yazılmış olur ve bu adrese VA (Virtual Address) denir. Bu adres Image Base adres ile RVA adresin toplamına eşittir. Bu işleme küçük bir örnek vermek gerekirse aşağıdaki resimde .text sectionun virtual adresi 0x1000 olarak görünmekte ancak bu adres aslında RVA adresidir. Uygulamayı hafızaya yükledikten sonra konumuna baktığımızda adresin 0x00401000 olduğunu görmekteyiz.</p>
+                    </p>
+
+                    <figure>
+                        <img src="../../assets/posts/pe_files/rva.png">
+                        <figcaption>(RVA adresi 0x1000)</figcaption>
+                    </figure>
+                    
+                    <br>
+
+                    <figure>
+                        <img src="../../assets/posts/pe_files/va.png">
+                        <figcaption>(VA adresi 0x00401000)</figcaption>
+                    </figure>
+
+
+                    <p>Resimde ayrıca hafızada Image Base adres değerinin söylediğimiz gibi 0x00400000 olduğunu görmekteyiz. Bu adrese RVA adresi olan 0x1000 değerini toplarsak hafızada görmekte olduğumuz VA adresi olan 0x00401000 değerine ulaşabiliriz.</p>
+                    
+
+                    
+
+
+                </div>
+            </section>
+        </div>
+    </body>
+</html>

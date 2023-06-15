@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+
+<html>
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <title>muraterdem.org</title>
+        <meta name="keywords" content="exploitation, malware analysis, reverse engineering, mobile security, cyber security, programing, operation systems, linux, windows, android, information security,research">
+        <meta name="description" content="this blog contains my writes about reverse engineering, mobile security, exploitation, ASM, etc ">
+        <link rel="stylesheet" href="../../css/main.css"  >
+        
+    </head>
+    <body>
+        <div id="page_area">
+            <header>
+                <div>
+                    <h1 class="title">Murat ERDEM - Personal Research Blog</h1>
+                    <a class="social" href="https://www.linkedin.com/in/erdemmurat/">
+                        <img src="../../assets/linkedin.png">
+                    </a>
+                    <a class="social" href="https://github.com/moncasp">
+                        <img src="../../assets/github.png">
+                    </a>
+                </div>
+                <br><hr><br>
+            </header>
+
+            <section>
+                <div>
+                    <h1><b>Powershell 0x01 – Temel Komutlar</b></h1>
+                    <h5>February 21, 2021</h5>
+
+                    <p>Bu yazımızda Windows sistemlerde Powershell konusuna odaklanacağız. Powershell de script yazma ve ExecutionPolicy ne işe yarar biraz bu konulara değineceğiz.</p>
+                    <h3>Execution Policy Mevzusu</h3>
+
+                    <p>Windows varsayılan olarak güvenlik gerekçesiyle imzasız powershell sciptlerini yürütmeye izin vermemektedir. Bu güvenilmez scriptere kendi lokalimizde yazdıklarımızda dahildir. Ancak burada Execution Policy’in bir güvenlik önlemi olduğunu düşünmemeliyiz. Çünkü bu tam anlamıyla bir güvenlik önlemi değildir. Burada disk üzerinden yükleme işlemleri kontrol edilmektedir. Bu noktada malware developerların fileless atacklar kullanarak sadece memory üzerindeki saldırıları bu kontrolleri bypass etmektedir. Bunun yanında <a target="_blank" href="https://www.netspi.com/blog/technical/network-penetration-testing/15-ways-to-bypass-the-powershell-execution-policy/">netspi</a> sitesinde bu kontrolleri bypass etmenin 15 farklı yolu anlatılmış göz atmanızı tavsiye ederim. Buradaki bypass tekniklerinden bazılarını denedim ve başarılı bir şekilde execution policy bypass etmeyi başardım.</p>
+                    <p>Execution policy değeri varsayılan olarak Restricted olarak gelir. Get-ExecutionPolicy komutu ile o anki geçerli değeri öğrenebiliriz. 6 farklı değeri bulunmaktadır.</p>
+                    <br>
+                    <table>
+                        <tbody>
+                            <tr>
+                                <td>Restricted</td>
+                                <td>Varsayılan olarak gelmektedir. Hiç bir script dosyasını çalıştırmaz sadece consoldan girilen komutları çalıştırmaktadır.</td>
+                            </tr>
+                            <tr>
+                                <td>RemoteSigned</td>
+                                <td>Sadece imzalı olan scriptleri çalıştırır</td>
+                            </tr>
+                            <tr>
+                                <td>AllSigned</td>
+                                <td>İmzalı yada sizin yazdığınız scriptleri çalıştırır</td>
+                            </tr>
+                            <tr>
+                                <td>Unrestricted</td>
+                                <td>PS 6.0 dan sonra default değerdir. Tüm scriptleri çalıştırır sadece download edilenler için izin ister</td>
+                            </tr>
+                            <tr>
+                                <td>Undefined</td>
+                                <td>Execution policy değerini kaldırır.</td>
+                            </tr>
+                            <tr>
+                                <td>Bypass</td>
+                                <td>Bütün scriptleri onay istemeden çalıştırır</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                    <br>
+                    <p>Set-ExecutionPolicy komutu ile bu izinler değiştirilebilir ancak admin yetkisi gerekmektedir.</p>
+                    <figure>
+                        <img src="../../assets/posts/uncategorized/powershell_0x01/image_2021-02-11_213349.png">
+                    </figure> 
+                    <p>Burada execution policy değerini bypass olarak değiştirdik bu şekilde sorunsuz olarak script dosyalarımızı çalıştırabileceğiz.</p>
+
+
+                    <h3>Değişken Tanımlama ve Değişken Tipleri</h3>
+                    <p>Powershell değişken tanımlama yapmak için “$” işaretini kullanır. “$isim” şeklinde tanımlama yapılabilir. Bu şekilde yapılan tanımlamalarda içerisine gönderilen veri tipine bakmaksızın kabul eder ve o veriyi tutar. Ancak biz belirli tiplerdeki verileri tutmasını istiyorsak bunu da tanımlama sırasında belirtebiliriz. aşağıda temel tiplerde nasıl tanımlama yapacağı gösterilmiştir.</p>
+<pre>       
+    <code>
+        >>$var=123
+        >>$var="aaaa"
+
+        >>[Int]$sayi=1234
+        >>[String]$metin="aaaa"
+        >>[datetime]$tarih="01.01.2020"
+        >>[bool]$boolean=$True
+        >>[Object]$liste = 1,2,3,4
+    </code>
+</pre>
+                    <h3>Yardım Komutları</h3>
+                    <p>Get-Command ve Get-Help komutları iki önemli yardımcı komutumuzdur. Get-Command powershell üzerinde tanımlanmış komutları, fonksiyonları yada aliasları gösteren bir yardımcı komuttur. Get-Help ise argüman olarak verilen komutun kullanımı ile ilgili bilgiler verir.</p>
+
+
+                    <figure>
+                        <img src="../../assets/posts/uncategorized/powershell_0x01/image_2021-02-14_130113.png">
+                    </figure> 
+
+                    <h3>Export/Import</h3>
+                    <p>Bir çıktı oluşturacağımızda yada bir dosyayı import edeceğimizde bunu farklı şekillerde yapabiliriz. Örnek olarak xml yada json formatları aşağıdaki gibi kullanılabilir.</p>
+                    <br>
+                    <table>
+                        <tbody>
+                            <tr>
+                                <td>Import-Clixml</td>
+                                <td>Xml olarak bir dosyadan okuma yapar</td>
+                            </tr>
+                            <tr>
+                                <td>Export-Clixml</td>
+                                <td>Xml olarak bir dosyaya çıktı oluşturur</td>
+                            </tr>
+                            <tr>
+                                <td>Export-CSV</td>
+                                <td>CSV olarak bir dosyaya çıktı oluşturur</td>
+                            </tr>
+                            <tr>
+                                <td>Out-File</td>
+                                <td>Çıktıyı dosyaya yönlendirir</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                    <br>
+
+                    <p>Bunların yanında Convert işlemleri de kullanılabilir. Bu işlemlerde ConvertTo-xxx yada ConvertFrom-xxx komutları kullanılmaktadır. En çok kullanılan formatlardan birisi olan json ile çalışırken ConvertTo-Json methodu ile bir çıktıyı json formatına çevirebiliriz. Bunun yanında ConverFrom-Json ile de jsondan powershell üzerinde kullanabileceğimiz bir nesne formatına dönüştürebiliriz.</p>
+
+                    <figure>
+                        <img src="../../assets/posts/uncategorized/powershell_0x01/image_2021-02-14_151157.png">
+                    </figure>
+
+                    <h3>Operatörler</h3>
+                    <p>Powershell scripti yazarken en çok kullanılan operatörler ve kullanım alanları aşağıdaki gibidir.</p>
+                    <br>
+                    <table>
+                        <tbody>
+                            <tr>
+                                <td>Ön tanımlı değişkenleri listesi</td>
+                                <td>Get-ChildrenItem Variable</td>
+                            </tr>
+                            <tr>
+                                <td>Aritmetik</td>
+                                <td>+, -, *, /, %</td>
+                            </tr>
+                            <tr>
+                                <td>Atama</td>
+                                <td>=, +=, -=, *=, /=, %=</td>
+                            </tr>
+                            <tr>
+                                <td>Karşılaştırma</td>
+                                <td>-eq, -gt, -ne, -lt, -le, -ge</td>
+                            </tr>
+                            <tr>
+                                <td>mantıksal</td>
+                                <td>-and, -or, -not, -xor, !</td>
+                            </tr>
+                            <tr>
+                                <td>Yönlendirme</td>
+                                <td>>, >>, 2>, 2>></td>
+                            </tr>
+                            <tr>
+                                <td>tip</td>
+                                <td>-is, -isnot, -as</td>
+                            </tr>
+                            <tr>
+                                <td>özel karakterler</td>
+                                <td>@, [], .., ,, ., $, |</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                    <br>
+
+                    <h3>Diziler</h3>
+                    <p>Bildiğimiz gibi diziler içerisinde birden fazla veri tutmayı sağlarlar. Powershell üzerinde de arraylar bulunmaktadır ancak bu arrayların farklı tanımlama şekilleri vardır.</p>
+<pre>       
+    <code>
+        >>$array = 1,2,3,4,5,6,7,8,9
+        >>$array = @{1,2,3,4.2,"selam",$False)
+        >>$array = 1..50
+        >>[int32[]]$array = 1,2,3
+        >>$array = New-Object System.Collections.ArrayList
+    </code>
+</pre>
+
+                    <p>dizilerde kullanabileceğimiz bazı fonksiyonlar vardır. Bunlar programlama işlemimizi kolaylaştıracaktır.</p>
+                    <br>
+                    <table>
+                        <tbody>
+                            <tr>
+                                <td>$array.Coun</td>
+                                <td>Dizideki eleman sayısını döner</td>
+                            </tr>
+                            <tr>
+                                <td>$array[1]</td>
+                                <td>Dizinin birinci elemanını döner</td>
+                            </tr>
+                            <tr>
+                                <td>$array[-1]</td>
+                                <td>dizinin son elamanını döner</td>
+                            </tr>
+                            <tr>
+                                <td>$array[0…5</td>
+                                <td>dizinin ilk 5 elemanını döner</td>
+                            </tr>
+                            <tr>
+                                <td>$array[-1..-6]</td>
+                                <td>dizinin son 5 elemanını döner</td>
+                            </tr>
+                            <tr>
+                                <td>$array.length</td>
+                                <td>dizinin uzunluğunu döner</td>
+                            </tr>
+                            <tr>
+                                <td>$arrray[-1..$array.length]</td>
+                                <td>diziyi ters çevirir</td>
+                            </tr>
+                            <tr>
+                                <td>$array+=$veri</td>
+                                <td>diziye eleman ekler</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                    <br>
+
+                    <p>Bunların yanında eğer dizi System.Collections.ArrayList ile oluşturulan diziler için Add komutu eleman eklemeye ,Remove komutu eleman silmeye yaramaktadır.</p>
+
+                    <h3>Dictionary</h3>
+                    <p>Sözlükler oldukça kullanışlı yapılardır ve içerisinde key-value ilişkisi ile veri tutmak için kullanılmaktadır.</p>
+
+                    <figure>
+                        <img src="../../assets/posts/uncategorized/powershell_0x01/image_2021-02-14_212039.png">
+                    </figure>
+                    <br>
+                    <table>
+                        <tbody>
+                            <tr>
+                                <td>$dic.keys</td>
+                                <td>tanımlı keyleri döner</td>
+                            </tr>
+                            <tr>
+                                <td>$dic.values</td>
+                                <td>tanımlı değerleri döner</td>
+                            </tr>
+                            <tr>
+                                <td>$dic.Add(“Key”,”Value”)</td>
+                                <td>eleman ekler</td>
+                            </tr>
+                            <tr>
+                                <td>$dic+=@{“key”=”value”}</td>
+                                <td>eleman ekler</td>
+                            </tr>
+                            <tr>
+                                <td>$dic.Remove(“Key”)</td>
+                                <td>eleman siler</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                    <br>
+                    <h3>Strings</h3>
+                    <p>Powershellde de diğer programlama dillerindeki gibi kullanılırlar. Burada önemli nokta tek tırnak(‘) ve çift tırnak(“) arasındaki farktır. tek tırnak ile yazılan bir string içerisinde değişken kullanılamaz ama çift tırnak içerisinde yazılan bir string ifade içerisinde değişkenler kullanılabilir.</p>
+                    <figure>
+                        <img src="../../assets/posts/uncategorized/powershell_0x01/image_2021-02-14_213418.png">
+                    </figure>
+                    <br>
+                    <table>
+                        <tbody>
+                            <tr>
+                                <td>$string.CompareTo(“metin”)</td>
+                                <td>Karşılaştırma işlemi yapar (case-insensitive)</td>
+                            </tr>
+                            <tr>
+                                <td>[string]::Compare(“metin”,”metin”,$True)</td>
+                                <td>Karşılaştırma yapar (case-sensitive)</td>
+                            </tr>
+                            <tr>
+                                <td>$string.StartsWith(“metin”)</td>
+                                <td>Başlangıç değerini karşılaştırır (case-sensitive)</td>
+                            </tr>
+                            <tr>
+                                <td>$string.EndsWith(“metin”)</td>
+                                <td>Bitiş Değerini karşılaştırır (case-sensitive)</td>
+                            </tr>
+                            <tr>
+                                <td>$string.ToLower()</td>
+                                <td>Küçük harfe çevirir</td>
+                            </tr>
+                            <tr>
+                                <td>$string.ToUpper()</td>
+                                <td>Büyük harfe çevirir</td>
+                            </tr>
+                            <tr>
+                                <td>$string.Contains(“metin”)</td>
+                                <td>İçerisinde bulunup bulunmadığını kontrol eder</td>
+                            </tr>
+                            <tr>
+                                <td>$string.Replace(“metin”,”metin”)</td>
+                                <td>Metin değiştirme yapar</td>
+                            </tr>
+                            <tr>
+                                <td>$string.SubString(3,10)</td>
+                                <td>3 ten 10 a kadar olan indekslerdeki metni döner</td>
+                            </tr>
+                            <tr>
+                                <td>$string.Split(“a”)</td>
+                                <td>a harflerinden parçalar</td>
+                            </tr>
+                            <tr>
+                                <td>$string.ToByteArray()</td>
+                                <td>Byte tipine dönüştürür</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                    <br>
+                    <h3>if-elseif-else</h3>
+                    <p>Karar yapılarının kullanımı ve aşağıdaki bir çok yapı diğer programlama dillerine benzer şekilde kullanılmaktadır.</p>
+                    
+                    <figure>
+                        <img src="../../assets/posts/uncategorized/powershell_0x01/image.png">
+                    </figure>
+
+                    <h3>Switch</h3>
+                    <figure>
+                        <img src="../../assets/posts/uncategorized/powershell_0x01/image-1.png">
+                    </figure>
+
+                    <h3>try-catch</h3>
+                    <figure>
+                        <img src="../../assets/posts/uncategorized/powershell_0x01/image-2.png">
+                    </figure>
+
+                    <h3>While-DoWhile</h3>
+                    <figure>
+                        <img src="../../assets/posts/uncategorized/powershell_0x01/image-3.png">
+                    </figure>
+
+                    <h3>For</h3>
+                    <figure>
+                        <img src="../../assets/posts/uncategorized/powershell_0x01/image-4.png">
+                    </figure>
+
+                    <h3>ForEach</h3>
+                    <figure>
+                        <img src="../../assets/posts/uncategorized/powershell_0x01/image-5.png">
+                    </figure>
+                    <p>ForEach döngüsünü pipeline içerisine kullanırken aşağıdaki gibi kullanabiliriz.</p>
+                    <figure>
+                        <img src="../../assets/posts/uncategorized/powershell_0x01/image-6.png">
+                    </figure>
+                    <p>Burada “%” işareti foreach döngüsünün alias tanımlamasıdır, “$_” ifadesi ise o anki geçerli elemanını göstermektedir.</p>
+
+                    <h3>Param</h3>
+                    <p>Parama komutu bir script dosyasına yada bir fonksiyona geçilebilecek parametrelerin tanımlanmasında kullanılmaktadır.</p>
+                    <figure>
+                        <img src="../../assets/posts/uncategorized/powershell_0x01/image-7.png">
+                    </figure>
+
+                    <h3>Function</h3>
+                    <figure>
+                        <img src="../../assets/posts/uncategorized/powershell_0x01/image-8.png">
+                    </figure>
+                    <p>Alternatif olarak parametreler aşağıdaki gibi de tanımlanabilir.</p>
+                    <figure>
+                        <img src="../../assets/posts/uncategorized/powershell_0x01/image-9.png">
+                    </figure>
+
+                    <h3>Powershell de .Net Kullanmak</h3>
+                    <p>Powershell’in en güzel özelliklerinden biriside .net ile birlikte program kullanılabilmesidir. Bunu yapmanın farklı yolları vardır. En basit yolu direk olarak kullanmak istediğimiz fonksiyonu konsoldan çağırmaktır.</p>
+<pre>       
+    <code>
+        >>[System.Console]::WriteLine("moncasp")
+        moncasp
+    </code>
+</pre>
+
+                    <p>Bu şekilde ilgili fonksiyonu dahil olduğu kütüphane ile birlikte çağırabiliriz. Eğer çağırmak istediğimiz kütüphane powershell üzerinde tanımlı değilse aşağıdaki komut ile yüklenebilir.</p>
+<pre>       
+    <code>
+        >>[System.Reflection.Assembly]::LoadWithPartialName("System.Windows.Forms")
+    </code>
+</pre>
+                    <p>Bu fonksiyonları kullanmanın başka bir yolu da ilgili sınıfın nesnesini oluşturmaktır. Bunu aşağıdaki gibi tanımlayıp kullanabiliriz.</p>
+
+<pre>       
+    <code>
+        >>New-Variable -Name myconsole -Value ([System.Console])
+        >>$myconsole::WriteLine("moncasp")
+        moncasp
+    </code>
+</pre>
+
+                    <p>Kütüphane kullanmanın yanında farklı işlemleri de .net kullanarak gerçekleştirmek istiyorsak aşağıdaki gibi bir kullanıma başvurabiliriz.</p>
+
+<pre>       
+    <code>
+        Add-Type -TypeDefinition @"
+
+        using System;
+        using System.Collections.Generic;
+        using System.Linq;
+        using System.Text;
+        using System.Threading.Tasks;
+
+        namespace powershellNet
+        {
+            public static class Program
+            {
+                public static void Main()
+                {
+                    string message = "Hello World!!";
+
+                    Console.WriteLine(message);
+                }
+            }
+        }
+
+        "@ -ReferencedAssemblies System.Windows.Forms
+
+        [powershellNet.Program]::Main();
+    </code>
+</pre>
+
+                    <p>Burada Program sınıfı ve main fonksiyonunun public olmasına dikkat etmek gerekmektedir.</p>
+
+                    <figure>
+                        <img src="../../assets/posts/uncategorized/powershell_0x01/image-10.png">
+                    </figure>
+
+                </div>
+            </section>
+        </div>
+    </body>
+</html>

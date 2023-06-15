@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+
+<html>
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <title>muraterdem.org</title>
+        <meta name="keywords" content="exploitation, malware analysis, reverse engineering, mobile security, cyber security, programing, operation systems, linux, windows, android, information security,research">
+        <meta name="description" content="this blog contains my writes about reverse engineering, mobile security, exploitation, ASM, etc ">
+        <link rel="stylesheet" href="../../css/main.css"  >
+        
+    </head>
+    <body>
+        <div id="page_area">
+            <header>
+                <div>
+                    <h1 class="title">Murat ERDEM - Personal Research Blog</h1>
+                    <a class="social" href="https://www.linkedin.com/in/erdemmurat/">
+                        <img src="../../assets/linkedin.png">
+                    </a>
+                    <a class="social" href="https://github.com/moncasp">
+                        <img src="../../assets/github.png">
+                    </a>
+                </div>
+                <br><hr><br>
+            </header>
+
+            <section>
+                <div>
+                    <h1><b>PE Files - 0x04</b></h1>
+                    <h5>July 27, 2020</h5>
+
+                    <p>En son bir PE dosyasındaki MZ Header alanından bahsetmiş ve bu alandaki verilere nasıl ulaşabileceğimizden bahsetmiştik şimdi ise bir sonraki alanımız olan PE File Signature ve PE Header alanından bahsedelim ve buradaki verilere nasıl erişebileceğimizi tartışalım.</p>
+                    <p>Öncelikle aşağıdaki resmi hatırlayalım burada e_lfanew verisindeki değeri PE header alanına erişim için kullandığımızı söylemiştik.</p>
+
+                    <figure>
+                        <img src="../../assets/posts/pe_files/e_lfanew.png">
+                    </figure>
+
+                    <p>PE başlığına basit bir matematikle aşağıdaki şekilde erişebiliriz.</p>
+
+                    <figure>
+                        <img src="../../assets/posts/pe_files/e_megic_address.png">
+                    </figure>
+
+                    <p>Burada e_megic adres değeri 0x00 dır bu adreslerin gerçekte sıfır olmadığını bu değerin Image Base adrese olan uzaklığı temsil ettiğini unutmayalım.</p>
+
+                    <figure>
+                        <img src="../../assets/posts/pe_files/e_lfanew_deger.png">
+                    </figure>
+                    <p>e_lfanew değeri ise 0xF8 dir bu iki adresi toplayarak PE signature adresine ulaşabileceğimizi söylemiştik.</p>
+                    <figure>
+                        <img src="../../assets/posts/pe_files/signature-adress.png">
+                    </figure>
+                    <p>Bu matematik işlemini kullanarak bizde aşağıdaki kodlar ile PE signature adresine ulaşabiliriz. Bu adresteki bilgileri elde etmenin kolay yolu ise PIMAGE_NT_HEADERS32 yapısını kullanmaktır.</p>
+
+<pre>
+    <code>
+        PIMAGE_NT_HEADERS32 ntheader = (PIMAGE_NT_HEADERS32)(PImageHeader->e_lfanew + (LONG)fileData);
+        cout << endl << "______PE_SIGNATURE______" << endl;
+        cout << "PE SIGNATURE : " << hex << ntheader->Signature;
+        cout << endl << endl;
+    </code>
+</pre>
+                    <p>Burada sadece imza yazdırmak için ayrı bir fonksiyon yazdırmaya gerek duymadım.Kullandığımız PIMAGE_NT_HEADERS32 yapısının tanımlanması ise aşağıdaki gibidir.</p> 
+
+                    <figure>
+                        <img src="../../assets/posts/pe_files/image_nt_headers.png">
+                    </figure>
+                    <p>Burada signature değişkeni bizim PE ifademizin hexedecimal karşılığı 0x00004550 değerini tutmaktadır. Diğer değişkenler ise kendi içinde farklı bilgiler tutmaktadır. FileHeader içerisindeki verileri elde etmek için IMAGE_FILE_HEADER yapısını kullanabiliriz. IMAGE_FILE_HEADER yapısı ise aşağıdaki gibi tanımlanmıştır.</p>
+                    <figure>
+                        <img src="../../assets/posts/pe_files/image_file_header.png">
+                    </figure>
+                    <p>Bu veriler bizim için ifade ettiği anlam için ise genel olarak yazılan programın karakteristik özelliklerini tutuyor diyebiliriz. Hangi işlemci için yazıldığı, nasıl işleneceği gibi veriler içerir.</p>
+
+                    <p>Örnek olarak burada NumberOfSection PE dosyamızdaki section sayısını verir sectionlara daha sonra değineceğiz ancak bu değere göre sectionlar doğru şekilde ayrılarak programın hatasız çalışması sağlanır ve bu değer en fazla 96 olabilir.</p>
+                    <p>Machine değeri ise programın çalışması için gerekli işlemci mimarisini göstermektedir.</p>
+
+                    <figure>
+                        <img src="../../assets/posts/pe_files/mimari.png">
+                    </figure>
+                    <p>Bir başka değerimiz olan Characteristics değeri ise aşağıdaki gibi özellikleri bize göstermektedir, Bu özelliklerden birden fazlasını barındırıyorsa mantıksal “veya” işlemi ile ilgili değerleri birleştirerek tek bir değer olarak içerisinde tutar. Daha fazlasını windowsun dokümanlarında bulabilirsiniz.</p>
+
+                    <figure>
+                        <img src="../../assets/posts/pe_files/characteristics.png">
+                    </figure>
+
+                    <p>SizeOfOptionalHeader ise bir sonraki veri alanı olan Optional header kısmının boyutunu tutmaktadır.</p>
+                    <p>Optional Header kısmına geçmeden önce Image File Header kısmındaki bilgilere nasıl ulaşacağımıza bakalım. aşağıdaki kodlar bunun için yeterli olacaktır.</p>
+
+<pre>
+    <code>
+        IMAGE_FILE_HEADER imageFileHeader = (IMAGE_FILE_HEADER )ntheader->FileHeader;
+        ImageFileHeaderWriter(imageFileHeader);
+    </code>
+</pre>
+                    <p>Burada ilgili verileri yazdırmak için kullanacağımız ImageFileHeaderWriter fonksiyonunu oluşturduk onun kodları ise aşağıdaki gibidir.</p>
+
+<pre>
+    <code>
+        void ImageFileHeaderWriter(IMAGE_FILE_HEADER ImageFileHeader) {
+            cout << endl << "______PIMAGE_FILE_HEADER______" << endl;
+            cout << "Characteristics : " << hex << ImageFileHeader.Characteristics << endl;
+            cout << "NumberOfSections : " << hex << ImageFileHeader.NumberOfSections << endl;
+            cout << "TimeDateStamp : " << hex << ImageFileHeader.TimeDateStamp << endl;
+            cout << "PointerToSymbolTable : " << hex << ImageFileHeader.PointerToSymbolTable << endl;
+            cout << "NumberOfSymbols : " << hex << ImageFileHeader.NumberOfSymbols << endl;
+            cout << "SizeOfOptionalHeader : " << hex << ImageFileHeader.SizeOfOptionalHeader << endl;
+            cout << "Characteristics : " << hex << ImageFileHeader.Characteristics << endl;
+            cout << endl << endl << endl;
+        }
+    </code>
+</pre>
+                    <p>Buraya kadar yaptıklarımızı bir test edecek olursak çıktımız aşağıdaki gibi olacaktır.</p>
+
+                    <figure>
+                        <img src="../../assets/posts/pe_files/cikti.png">
+                    </figure>
+
+                </div>
+            </section>
+        </div>
+    </body>
+</html>

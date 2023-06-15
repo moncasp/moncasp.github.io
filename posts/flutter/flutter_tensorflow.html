@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+
+<html>
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <title>muraterdem.org</title>
+        <meta name="keywords" content="exploitation, malware analysis, reverse engineering, mobile security, cyber security, programing, operation systems, linux, windows, android, information security,research">
+        <meta name="description" content="this blog contains my writes about reverse engineering, mobile security, exploitation, ASM, etc ">
+        <link rel="stylesheet" href="../../css/main.css"  >
+        
+    </head>
+    <body>
+        <div id="page_area">
+            <header>
+                <div>
+                    <h1 class="title">Murat ERDEM - Personal Research Blog</h1>
+                    <a class="social" href="https://www.linkedin.com/in/erdemmurat/">
+                        <img src="../../assets/linkedin.png">
+                    </a>
+                    <a class="social" href="https://github.com/moncasp">
+                        <img src="../../assets/github.png">
+                    </a>
+                </div>
+                <br><hr><br>
+            </header>
+
+            <section>
+                <div>
+                    <h1><b>TensorFlow Model Training and Object Recognition With Flutter</b></h1>
+                    <h5>October 24, 2020</h5>
+
+                    <p>Bu yazımızda flutter tflite paketini kullanarak resimler üzerinde nesne tanıma yapacak ve bu çalışmada kullanılan modelleri kendi istediğimiz şekilde nasıl eğitebileceğimize değineceğiz.</p>
+
+                    <p>Yapay zeka konusunda çok fazla zaman geçirmiş birisi değilim ancak siber güvenlik alanında çalışmaya başlamadan önce bir süre makine öğrenmesi, görüntü işleme, model eğitme, GANs gibi konularda küçük çalışmalarım olmuştu. Bu yazıda ise o günlerden edindiğim tecrübeler ve son zamanlarda sıklıkla karşılaştığım tflite ile flutter üzerinde yapılan projeleri incelediğimde ve konu ile ilgili yaptığım araştırmalarda elde ettiğim bilgileri paylaşacağım.</p>
+
+                    <p>Projenin son halini github repomda paylaşacağım <a target="_blank" href="https://github.com/moncasp/Tflite_RecognizingObject">buradan</a> elde edebilirsiniz</p>
+
+                    <h3>Model Eğitmek</h3>
+                    <p>Öncelikle bir görüntüdeki nesneleri tanıyabilmek için eğitilmiş bir modele ihtiyacımız vardır. Hazır modelleri <a target="_blank" href="https://tfhub.dev/s?deployment-format=lite&subtype=module,placeholder">burada</a> indirebilirsiniz yada kendi modelinizi eğitmek için <a href="https://github.com/Tony607/object_detection_demo" target="_blank">buradan</a> repoyu indirebilirsiniz. İndirme işleminden sonra gerekli kurulumları yapmak gerekiyor bunu aşağıdaki komut ile yapabilirsiniz.</p>
+
+<pre>       
+    <code>
+        pip3 install -r requirements.txt
+    </code>
+</pre>
+
+                    <p>Burada repo içerisini incelersek data klasörünü görebilirsiniz burada bizim modeli eğiteceğimiz veriler tutulmaktadır. Bu dizin içerisindeki raw klasörüne yüksek çözünürlükteki resimleri atmamız gerekmekte. Örnek olarak resimlerdeki yüzleri tanıyan bir model eğitmek istersek içerisinde insan yüzlerinin olduğu resimleri buraya atmalıyız. Daha sonra bu resimleri yeniden boyutlandırmamız gerekmekte. Bu modelin daha kolay eğitilmesine yardımcı olacaktır. 800 x 600 piksel boyutunda yüksek çözünürlükte ve jpg formatında bu resimleri yeniden düzenleyerek aynı dizindeki image/train dizinine kayıt ediyoruz. Images altında bulunan train dizini modelimizin öğrenme sırasında kullanacağı data setlerin bulunduğu dizindir, test klasörü ise model eğitildikten sonra doğruluk oranı için kendini test edeceği dizindir. Örnek olarak 1000 adet resim varsa elimizde bunun 200 kadarını test dizinine kalanlarını da train dizinine koyabiliriz. Eğer model eğitildikten sonra doğruluk oranı istenilenden düşük ise veri sayısını arttırmak doğruluk oranını yükseltecektir. Bu resimlerin üzerindeki yüzlerin olduğu kısımları eğitime başlamadan önce etiketlememiz gerekmekte. Bunun için <a href="https://github.com/heartexlabs/labelImg" target="_blank">LabelImg tool</a> kullanılabilir.</p>
+                    <figure>
+                        <img src="../../assets/posts/flutter/flutter_tensorflow/tflite_kullanimi_label_add.jpg">
+                    </figure>
+                    
+                    <p>Modelimizin Eğitilmesi kısmında ise ciddi bir donanım gerekmekte genel olarak daha hızlı işlem yapabildiği için GPU kullanılarak eğitilmektedir. Ancak google tarafından sunulan <a href="https://colab.research.google.com/notebooks/intro.ipynb" target="_blank">google colab</a> hizmeti ile kendi sisteminizi meşgul etmek yerine google sunucuları üzerinde modelinizi eğitebilirsiniz. Bunuda github yada drive üzerine modelinizi ve data setlerinizi yükleyerek yapabilirsiniz. Bunun nasıl yapıldığı ile ilgili detaylı bilgiye <a target="_blank" href="https://ayyucekizrak.medium.com/adım-adım-google-colab-ücretsiz-tpu-kullanımı-621dc6e5487d">buradan</a> ulaşabilirsiniz.</p>
+                    
+                    <p>Model eğitmek genelde uzun bir işlemdir yapay zeka ile ilgilenen arkadaşlarım uyumadan önce eğitimi başlatıp uyanınca sonuçlarına bakıyorlar size de bu yöntemi tavsiye edebilirim.</p>
+
+                    <h3>Tflite Model Elde Etmek</h3>
+
+                    <p>Modelimizi çalıştırdıktan sonra resimler üzerinde bazı algoritmalar uygulayarak öğrenmesini tamamlayacaktır. İstenilen seviyede bir doğruluk oranına sahipse bunu mobil uygulamalarda kullanabilmek için tflite modeline dönüştürmemiz gerekmekte bunun bir kaç farklı yolu vardır. bunlardan ilki aşağıdaki komutları sırası ile çalıştırmaktır.</p>
+<pre>       
+    <code>
+        !python /content/models/research/object_detection/export_tflite_ssd_graph.py — pipeline_config_path {pipeline_fname} — trained_checkpoint_prefix “/content/models/research/training/model.ckpt-1000” — output_directory “/content/object_detection_demo/” — add_postprocessing_op True — max_detections 10
+    </code>
+</pre>
+
+                    <p>Bu komut modelimizi tflite modeline dönüştürecektir. Daha sonra aşağıdaki komut ile <a target="_blank" href="https://github.com/tensorflow/tensorflow/tree/master/tensorflow/lite/toco">TACO</a> toolu üzerinden modelimizi optimize etmek gerekmektedir bu komut resimler üzerinde 300×300 piksellik bir düzenleme yapmaktadır.</p>
+
+<pre>
+    <code>
+        !toco \
+        — graph_def_file=”/content/object_detection_demo/tflite_graph.pb” \
+        — output_file=”/content/object_detection_demo/detect.tflite” \
+        — input_shapes=1,300,300,3 \
+        — input_arrays=normalized_input_image_tensor \
+        — output_arrays=’TFLite_Detection_PostProcess’,’TFLite_Detection_PostProcess:1',’TFLite_Detection_PostProcess:2',’TFLite_Detection_PostProcess:3' \
+        — inference_type=FLOAT \
+        — allow_custom_ops
+    </code>
+</pre>
+
+                    <p>Bir başka tflite modeli elde etme yöntemi SavedModel kullanmaktır bunu nasıl elde edeceğimizi <a href="https://www.tensorflow.org/guide/saved_model" target="_blank">dokümanlarından</a> bakabilirisiniz. SavedModel elde ettikten sonra aşağıdaki kod ile tflite modelimizi elde edebiliriz.</p>
+
+<pre>
+    <code>
+        import tensorflow as tf
+
+        # Convert the model
+        converter = tf.lite.TFLiteConverter.from_saved_model(saved_model_dir) # path to the SavedModel directory
+        tflite_model = converter.convert()
+
+        # Save the model.
+        with open('model.tflite', 'wb') as f:
+        f.write(tflite_model)
+    </code>
+</pre>
+
+
+                    <p>Terminal üzerinden de aşağıdaki komutu kullanabiliriz.</p>
+
+
+<pre>
+    <code>
+        tflite_convert \
+        --saved_model_dir=/tmp/mobilenet_saved_model \
+        --output_file=/tmp/mobilenet.tflite
+    </code>
+</pre>
+
+                    <h3>Tflite Paketinin Projeye Dahil Edilmesi</h3>
+                    <p>Buradan sonra Flutter kısmına geçiş yapıyoruz. Flutterde modelleri kullanabilmek için öncelikle <a href="https://pub.dev/packages/tflite" target="_blank">tflite</a> paketinin kurulumunu yapmamız gerekmekte kurulum için pubspec.yaml dosyasına aşağıdaki eklemeyi yapıp “flutter pup get” komutunu çalıştırmamız yeterli.</p>
+<pre>
+    <code>
+        dependencies:
+            tflite: ^1.1.1
+    </code>
+</pre>
+                    <p>Bu kurulum sırasında asıl dikkat etmemiz gereken nokta ise android\app\build.gradle dosyasında android içerisine aşağıdaki kod parçasını eklememiz. Bu eklemeyi yapmazsak zip file yada compress file gibi bir hata almaktayız.</p>
+
+<pre>
+    <code>
+        aaptOptions {
+            noCompress 'tflite'
+            noCompress 'lite'
+        }
+    </code>
+</pre>
+
+                    <p>Bu proje için gerekli bir başka paket ise image picker. Bunuda aşağıdaki gibi ekleme yaparak dahil edebiliriz projemize.</p>
+
+<pre>
+    <code>
+        dependencies:
+            tflite: ^1.1.1
+            image_picker: ^0.6.7+12
+    </code>
+</pre>                    
+
+
+
+                    <h3>Modelin Projeye Dahil Edilmesi</h3>
+                    <p>Gerekli kurulumlardan sonra uygulamamız ilk yüklendiği sırada oluşturmuş olduğumuz modeli de yüklemek için initState kısmında çağrılacak aşağıdaki fonksiyonu kullanabiliriz.</p>
+
+<pre>
+    <code>
+        loadModel() async {
+            await Tflite.loadModel(
+                model: "assets/ssd_mobilenet.tflite",
+                labels: "assets/ssd_mobilenet.txt",
+                numThreads: 5);
+          }
+    </code>
+</pre>
+
+                    <p>Burada modelimi ve lable dosyasını assets dizinine ekledim bunu uygulama her yüklendiğinde otomatik olarak çalıştıracağı için model her seferinde projeme dahil edilecektir.</p>
+                    <p>Yukarıdaki fonksiyonun çalışması için aşağıdaki kütüphaneyi ilgili sayfaya import etmemiz gerekmekte.</p>
+<pre>
+    <code>
+        import 'package:tflite/tflite.dart';
+    </code>
+</pre>
+                    <figure>
+                        <img src="../../assets/posts/flutter/flutter_tensorflow/tflite_kullanimi_start_page.png">
+                        <figcaption>(Açılış Sayfası)</figcaption>
+                    </figure>
+
+                    <h3>Tflite Model Kullanmak</h3>
+                    <p>Modelimizi projemize dahil ettikten sonra onu kullanmak için aşağıdaki gibi detectObjectOnImage fonksiyonuna ihtiyacımız var.</p>
+
+<pre>
+    <code>
+        detectObject(File image) async {
+            var recognitions = await Tflite.detectObjectOnImage(
+                path: image.path,
+                // required
+                model: "SSDMobileNet",
+                imageMean: 127.5,
+                imageStd: 127.5,
+                threshold: 0.4,
+                numResultsPerClass: 2,
+                asynch: true
+                );
+            print(recognitions[0]);
+            setState(() {
+              output = recognitions;
+            });
+          }
+    </code>
+</pre>
+                    <p>Burada yazmış olduğumuz fonksiyonda Image Picker plugini ile seçmiş olduğumuz resmin dosya yolunu parametre olarak alıyor ve ilgili resim üzerinde tarama yaparak resimde bulunan nesnenin etiketini, doğruluk oranını ve konumunu çıktı olarak veriyor.</p>
+
+<pre>
+    <code>
+        {
+            rect: {
+                w: 0.994217038154602, 
+                x: 0.0, h: 0.919082522392273, 
+                y: 0.07482728362083435
+            }, 
+            confidenceInClass: 0.6875, 
+            detectedClass: person
+        }
+    </code>
+</pre>
+
+                    <p>Bu verilere göre kullanıcıya ekranda nasıl görünmesini istiyorsak düzenleyip verebiliriz. Uygulama kapatılırken ise dispose fonksiyonunu aşağıdaki gibi düzenleyerek modelimizi kapatabiliriz.</p>
+
+<pre>
+    <code>
+        @override
+        void dispose() {
+            Tflite.close();
+            super.dispose();
+        }
+    </code>
+</pre>
+
+
+                    <figure>
+                        <img src="../../assets/posts/flutter/flutter_tensorflow/tflite_kullanimi_person-_detect-576x1024.png">
+                    </figure>
+
+                    <h3>Yararlı Kaynaklar</h3>
+                    <ol>
+                        <li>https://github.com/tzutalin/labelImg</li>
+                        <li>http://tzutalin.github.io/labelImg/</li>
+                        <li>https://github.com/tensorflow/tensorflow/tree/master/tensorflow/lite/toco</li>
+                        <li>https://github.com/harshilpatel312/open-images-downloader</li>
+                        <li>https://colab.research.google.com/notebooks/intro.ipynb</li>
+                        <li>https://tfhub.dev/s?deployment-format=lite&subtype=module,placeholder</li>
+                        <li>https://medium.com/@ayyucekizrak/adım-adım-google-colab-ücretsiz-tpu-kullanımı-621dc6e5487d</li>
+                        <li>https://www.tensorflow.org/lite/convert</li>
+                        <li>https://www.tensorflow.org/guide/saved_model</li>
+                        <li>https://github.com/Tony607/object_detection_demo</li>
+                        <li>https://medium.com/datadriveninvestor/how-to-train-your-own-custom-model-with-tensorflow-object-detection-api-and-deploy-it-into-android-aeacab7fa76f</li>
+                        <li>https://github.com/tensorflow/models/tree/master/community</li>
+                        <li>https://pub.dev/packages/tflite</li>
+                        <li>https://pub.dev/packages/image_picker</li>
+                    </ol>
+
+
+
+
+
+                </div>
+            </section>
+        </div>
+    </body>
+</html>

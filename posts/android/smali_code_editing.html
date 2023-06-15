@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+
+<html>
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <title>muraterdem.org</title>
+        <meta name="keywords" content="exploitation, malware analysis, reverse engineering, mobile security, cyber security, programing, operation systems, linux, windows, android, information security,research">
+        <meta name="description" content="this blog contains my writes about reverse engineering, mobile security, exploitation, ASM, etc ">
+        <link rel="stylesheet" href="../../css/main.css"  >
+        
+    </head>
+    <body>
+        <div id="page_area">
+            <header>
+                <div>
+                    <h1 class="title">Murat ERDEM - Personal Research Blog</h1>
+                    <a class="social" href="https://www.linkedin.com/in/erdemmurat/">
+                        <img src="../../assets/linkedin.png">
+                    </a>
+                    <a class="social" href="https://github.com/moncasp">
+                        <img src="../../assets/github.png">
+                    </a>
+                </div>
+                <br><hr><br>
+            </header>
+
+            <section>
+                <div>
+                    <h1><b>Smali Code Editing</b></h1>
+                    <h5>October 25, 2020</h5>
+
+                    <p>Bu yazımızda android apk dosyalarının smali kodlarını düzenleyerek kod akışını istediğimiz şekilde nasıl nasıl yönlendirebileceğimizi yada ek kod parçalarını nasıl ekleyebileceğimize değineceğiz.</p>
+                    <p>Bu yazıyı okumadan önce smali kodları hakkında daha fazla bilgi edinmek için daha önce yazdığım <a href="https://muraterdem.org/posts/android/introduction_to_smali.html" target="_blank">smali kodlarını okumak</a> yazıma bakabilirsiniz.</p>
+                 
+                    <p>Burada yapacağımız örnekte mobil bir zararlı yazılımın decode fonksiyonunu düzenleyerek bu fonksiyonun çıktılarını alacağız ve zararlının hedeflediği uygulamaları kendi içerisinde sakladığı komuta kontrol sunucusunun domain adresini ve kurban cihazda ne yapmak istediği ile ilgili bilgileri elde edeceğiz.</p>
+                    <p>Öncelikle burada kullanacağım zararlı yazılım bilgileri aşağıdaki gibidir.</p>
+
+                    <table>
+                        <tr>
+                            <td>Paket adı</td>
+                            <td>p0da2e7fa.pfabcaa97.p531a72f4</td>
+                        </tr>
+                        <tr>
+                            <td>SHA256</td>
+                            <td>2da55aa65107c4514a877c4f9b7b951c17cc2b96e54a2520989d98114c0c3408</td>
+                        </tr>
+                        <tr>
+                            <td>MD5</td>
+                            <td>2d648c6cfbbab944165b7d20cdce9f7a</td>
+                        </tr>
+                        <tr>
+                            <td>Link</td>
+                            <td><a target="_blank" href="https://koodous.com/apks/2da55aa65107c4514a877c4f9b7b951c17cc2b96e54a2520989d98114c0c3408">Download</a></td>
+                        </tr>
+                    </table>
+                    <br>
+                    <figure >
+                        <img class="icon" src="../../assets/posts/android/smali_edit/smali_editing_app_icon.png">
+                    </figure>
+
+                    <p>Uygulama hakkında kısa bir bilgi vermek gerekirse, uygulama 21 haziran 2020 tarihinde babalar gününe özel 20GB internet hediyesi vermek vaadi ile kurbanlarına yüklemeye çalışan yüklendikten sonra da bir çok zararlı işlem gerçekleştiren bir zararlı yazılımdır.</p>
+
+                    <h3>Kaynak Kod Analizi</h3>
+                    <p>Jadx-gui ile apk dosyasına bakacak olursak aşağıdaki gibi bir decode fonksiyonu görebiliriz.</p>
+
+<pre>       
+    <code>
+        package com.decryptstringmanager;
+
+        import javax.crypto.Cipher;
+        import javax.crypto.SecretKeyFactory;
+        import javax.crypto.spec.PBEKeySpec;
+        import javax.crypto.spec.SecretKeySpec;
+
+        public class DecryptString {
+            public static String decipher(String str) throws Exception {
+                SecretKeySpec secretKeySpec = new SecretKeySpec(SecretKeyFactory.getInstance("PBKDF2WithHmacSHA1").generateSecret(new PBEKeySpec("IJucsmcEqkNX0EYdIVB58lRX9Hugwa9E".toCharArray(), "IJucsmcEqkNX0EYdIVB58lRX9Hugwa9E".getBytes(), 128, 256)).getEncoded(), "AES");
+                Cipher instance = Cipher.getInstance("AES/ECB/PKCS5Padding");
+                instance.init(2, secretKeySpec);
+                return new String(instance.doFinal(toByte(str)));
+            }
+
+            public static String decryptString(String str) {
+                try {
+                    return decipher(str);
+                } catch (Exception e) {
+                    e.printStackTrace();
+                    return null;
+                }
+            }
+
+            public static String[] decryptStringArray(String[] strArr) {
+                String[] strArr2 = new String[strArr.length];
+                for (int i = 0; i < strArr.length; i++) {
+                    strArr2[i] = decryptString(strArr[i]);
+                }
+                return strArr2;
+            }
+
+            private static byte[] toByte(String str) {
+                int length = str.length() / 2;
+                byte[] bArr = new byte[length];
+                for (int i = 0; i < length; i++) {
+                    int i2 = 2 * i;
+                    bArr[i] = Integer.valueOf(str.substring(i2, i2 + 2), 16).byteValue();
+                }
+                return bArr;
+            }
+        }
+    </code>
+</pre>
+
+                    <p>Bu kodda bizim için önemli olan kısım decryptString fonksiyonu bu fonksiyon gelen şifreli verileri decode ederek geri döndürüyor.</p>
+
+                    <h3>Smali Kodlarını Düzenlemek</h3>
+                    <p>Uygulamayı düzenlemek için ilk ihtiyacımız olan smali kodlarını elde etmek bunun için apktool aracını kullanacağız. Aşağıdaki komut ile smali kodlarını elde edebiliriz.</p>
+
+
+<pre>       
+    <code>
+        apktool d -r sample.apk
+    </code>
+</pre>                   
+                    <p>Komut çalıştıktan sonra sample/smali/com/decryptstringmanager dizininde DecryptString.smali isminde bizim jadx-gui de bulduğumuz fonksiyonu görebiliriz. Bu dosyayı açtığımızda smali kodlarını göreceğiz. Bizim düzenlememiz gereken fonksiyonun smali kodları aşağıdaki gibidir.</p>
+
+<pre>       
+    <code>
+        .method public static decryptString(Ljava/lang/String;)Ljava/lang/String;
+            .locals 0
+
+            :try_start_0
+            invoke-static {p0}, Lcom/decryptstringmanager/DecryptString;->decipher(Ljava/lang/String;)Ljava/lang/String;
+
+            move-result-object p0
+            :try_end_0
+            .catch Ljava/lang/Exception; {:try_start_0 .. :try_end_0} :catch_0
+
+            return-object p0
+
+            :catch_0
+            move-exception p0
+
+            invoke-virtual {p0}, Ljava/lang/Exception;->printStackTrace()V
+
+            const/4 p0, 0x0
+
+            return-object p0
+        .end method
+    </code>
+</pre>
+
+
+
+                    <p>Burada fonksiyona zarar vermeden ekleme yapmamız gerekmekte. Yukarıdaki koda bakacak olursak try catch bloklarının nerede başlayıp bittiğini görebiliyoruz. Bizim yapmamız gereken try içerisinde decipher fonksiyonu çağrıldıktan sonra gelen plain texti geri döndürmeden önce loga yazdırmak.</p>
+
+<pre>       
+    <code>
+        const-string v0, "muraterdem_org"
+
+        nvoke-static {v0, p0}, Landroid/util/Log;->i(Ljava/lang/String;Ljava/lang/String;)I
+    </code>
+</pre>
+
+                    <p>Yukarıdaki kod parçacığı bize bunun için yardımcı olacaktır burada v0 log başlığı p0 ise şifresi çözülmüş olan stringler. bu kod parçasını fonksiyonumuza eklediğimizde fonksiyonumuzun son hali aşağıdaki gibi olacaktır. Dikkat etmemiz gereken fonksiyonda local değişken kullanılmamış olması ve biz log yazarken bir tane kullandık bunun için .locals değerini 1 olarak değiştireceğiz.</p>
+
+
+<pre>       
+    <code>
+        method public static decryptString(Ljava/lang/String;)Ljava/lang/String;
+        .locals 1
+
+        :try_start_0
+        invoke-static {p0}, Lcom/decryptstringmanager/DecryptString;->decipher(Ljava/lang/String;)Ljava/lang/String;
+
+        move-result-object p0
+        :try_end_0
+        .catch Ljava/lang/Exception; {:try_start_0 .. :try_end_0} :catch_0
+
+        const-string v0, "muraterdem_org"
+
+        invoke-static {v0, p0}, Landroid/util/Log;->i(Ljava/lang/String;Ljava/lang/String;)I
+
+        return-object p0
+
+        :catch_0
+        move-exception p0
+
+        invoke-virtual {p0}, Ljava/lang/Exception;->printStackTrace()V
+
+        const/4 p0, 0x0
+
+        return-object p0
+    .end method
+    </code>
+</pre>
+
+                    <p>Artık yapmamız gereken uygulamayı tekrar build edip imzalamak. Build işlemi için aşağıdaki komutu çalıştırabilirsiniz.</p>
+
+<pre>       
+    <code>
+        apktool b sample
+    </code>
+</pre>
+
+                    <p>Burada sample bizim az önce apkyı decode ettiğimizdeki klasör. bu işlem bittikten sonra hata alıyorsanız decode sırasında “-r” parametresini kullanmadığınız için olabilir. Eğer hata almadan buraya kadar geldiyseniz bundan sorasında apk imzalamaya geçebiliriz. APK imzalamak için keytool aracı ile bir sertifika oluşturuyoruz aşağıdaki komutu çalıştırdıktan sonra sizden bazı girdiler isteyecektir. burada belirlediğiniz şifre bir sonraki adımda kullanılacak. İstediği diğer bilgilerden birini girdikten sonra diğerlerini boş geçebilirsiniz.</p>
+
+
+
+<pre>       
+    <code>
+        keytool -genkey -v -keystore key.jks -alias alias_name -keyalg RSA -keysize 2048 -validity 10000
+    </code>
+</pre>
+
+                    <p>İşlem bittikten sonra key.jks dosyası oluştuğunu göreceksiniz. Bu dosyayı sample/dist dizinine taşıyalım burada bulunan sample apk editledikten sonra build ettiğimiz apk dosyasıdır. key.jks dosyası ile aynı dizine attıktan sonra aşağıdaki komut ile imzalama işlemini yapabiliriz.</p>
+
+<pre>       
+    <code>
+        apksigner sign --ks key.jks sample.apk
+    </code>
+</pre>
+
+                    <p>Burada farklı platformlarda çalışıyorsanız farklı araçlar ile imzalama yapabilirsiniz. ben ubuntu üzerinde çalıştığım için <a href="https://manpages.ubuntu.com/manpages/bionic/man1/apksigner.1.html" target="_blank">apksinger</a> aracını kullanıyorum.</p>
+                    <p>İmzalama işlemi bittikten sonra düzenlemeyi doğru yapıp yapmadığımızı test etmek için jadx-gui ile baktığımızda fonksiyona bizim eklediğimiz noktaların geldiğini görebiliriz.</p>
+
+<pre>       
+    <code>
+        public static String decryptString(String str) {
+            try {
+                String decipher = decipher(str);
+                Log.i("muraterdem_org", decipher);
+                return decipher;
+            } catch (Exception e) {
+                e.printStackTrace();
+                return null;
+            }
+        }
+    </code>
+</pre>
+                    <p>Şimdi aşağıdaki komutu terminalde çalıştıralım daha sonra ise emülatörde uygulamamızı çalıştıralım.</p>
+
+                    <pre>       
+                        <code>
+                            adb logcat | grep "muraterdem_org" >> log.txt
+                        </code>
+                    </pre>
+
+                    <p>Bir süre bekledikten sonra ctrl+c ile durduralım ve log.txt dosyamıza bakalım. Bir çok gereksiz çıktı göreceğiz ancak bunları incelediğimizde aşağıdaki gibi önemli bilgileri de elde edebiliriz.</p>
+
+                    <figure>
+                        <img src="../../assets/posts/android/smali_edit/smali_editing_cc.png">
+                    </figure>
+
+                    <figure>
+                        <img src="../../assets/posts/android/smali_edit/smali_editing_hedef_dil-1024x139.png">
+                    </figure>
+
+
+                    <p>Smali kodları ile uygulamaların kaynak kodunu düzenleyebildiğimiz için bu yöntemi zararlı yazılım analizlerinde, bir uygulamaya pentest sırasında yada anti vm veya root kontrol gibi analizi zorlaştırabilecek teknikleri bypass ederken kullanabilirisiniz.</p>
+
+
+
+                </div>
+            </section>
+        </div>
+    </body>
+</html>

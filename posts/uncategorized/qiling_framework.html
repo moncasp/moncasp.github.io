@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+
+<html>
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <title>muraterdem.org</title>
+        <meta name="keywords" content="exploitation, malware analysis, reverse engineering, mobile security, cyber security, programing, operation systems, linux, windows, android, information security,research">
+        <meta name="description" content="this blog contains my writes about reverse engineering, mobile security, exploitation, ASM, etc ">
+        <link rel="stylesheet" href="../../css/main.css"  >
+        
+    </head>
+    <body>
+        <div id="page_area">
+            <header>
+                <div>
+                    <h1 class="title">Murat ERDEM - Personal Research Blog</h1>
+                    <a class="social" href="https://www.linkedin.com/in/erdemmurat/">
+                        <img src="../../assets/linkedin.png">
+                    </a>
+                    <a class="social" href="https://github.com/moncasp">
+                        <img src="../../assets/github.png">
+                    </a>
+                </div>
+                <br><hr><br>
+            </header>
+
+            <section>
+                <div>
+                    <h1><b>Qiling Framework</b></h1>
+                    <h5>january 07, 2021</h5>
+
+                    <p>Bu yazımızda Qiling Framework nedir?,qiling ile neler yapabiliriz gibi konulara değineceğiz. uygulama olarakda basit bir api hooking yapacağız.</p>
+
+                    <figure>
+                        <img class="white_background" src="../../assets/posts/uncategorized/qiling/qiling_small.png">
+                        <figcaption>(Qiling Framework)</figcaption>
+                    </figure>
+
+
+                    <p>Qiling temelinde <a href="https://www.unicorn-engine.org" target="_blank">unicorn</a> engine bulunan farklı sistemleri simüle edebilen bir frameworktür. Qilingin özellikleri dokümantasyonunda aşağıdaki gibi listelenmiştir.</p>
+
+                    <figure>
+                        <img src="../../assets/posts/uncategorized/qiling/image_2021-01-07_193135.png">
+                    </figure>
+
+                    <p>Qilingin yukarıdaki gibi güzel özellikler var ancak burada benim en çok dikkatimi çeken noktalar isolated environment ve kernel oldu tersine mühendislik için oldukça kullanışlı özellikleri olduğunu söyleyebiliriz.</p>
+                    <p>Qiling genel olarak kullanması oldukça kolay bir yapıya sahip diyebiliriz ancak dokümantasyonunun yetersiz olmasından dolayı bir çok fonksiyonunu ve bu fonksiyonların kullanımını geliştirilmiş farklı projelerin kaynak kodlarının incelenmesinden öğrenmek gerekmekte bu da biraz uzun bir süreç ile birlikte anlaşılmayan noktalar karşımıza çıkarmaktadır. Geliştirildikçe bu gibi eksikler giderilerek daha kaliteli bir yapıya dönüşecektir.</p>
+                    <p>Qiling güzel bir sanallaştırma ve çok sayıda kullanışlı fonksiyon bulundurmasından dolayı üzerine çok faydalı ürünler geliştirilebilir. Şimdi ise bir kaç küçük kullanım örneği yapalım.</p>
+                    <h3>Sistem Simüle Etmek</h3>
+                    <p>ilk olarak kurulumları yapmamız gerekiyor, bunun için <a target="_blank" href="https://docs.qiling.io/en/latest/install/">buradaki</a> yazılanları uygulayabilirsiniz. kurulum sırasında önemli noktalardan birisi gerekli dll yada lib dosyalarını kurulu olan sistemden toplamanız gerekmekte bunun için hedef sistemde <a target="_blank" href="https://github.com/qilingframework/qiling/tree/master/examples/scripts">buradaki</a> scriptleri çalıştırabiliriz. Bu bizim için otomatik olarak toplama işlemini yapacaktır.</p>
+
+<pre>       
+    <code>
+        from qiling import *
+
+        ql = Qiling(["hello.exe"], "examples/rootfs/x86_windows",)
+        ql.run()
+    </code>
+</pre>
+
+                    <p>Kurulumdan sonra yukarıdaki gibi bir python kodunun çalıştırırsak bizim için sanal bir ortamda ilgili dosyayı çalıştıracaktır. Burada Qiling sınıfına gönderilen ilk parametre bir listedir ve çalıştırılacak olan uygulamayı ve argümanlarını alır. İkinci parametre ise simüle edilecek olan sistemi göstermektedir. run komutu ile de simülasyon başlamaktadır. Yukarıda ben bir dosyaya “hello world” yazan bir exe yazdım bunun çalıştırdığımızda aşağıdaki gibi bir çıktı almaktayız.</p>
+                    <figure>
+                        <img src="../../assets/posts/uncategorized/qiling/image_2021-01-07_202956-1024x578.png">
+                    </figure>
+                    <p>Bu loglarda görüldüğü gibi öncelikle gerekli dll’leri hafızaya yükleyip daha sonra çağrılan her api için bir log düşmekte. “examples/rootfs/x86_windows” dizinine gittiğimizde ise oluşturulan dosyayı görebiliriz.</p>
+                    <figure>
+                        <img src="../../assets/posts/uncategorized/qiling/image_2021-01-07_203145.png">
+                    </figure>
+
+
+                    <h3>API Hooking</h3>
+
+                    <p>Qiling’in sağladığı en güzel kolaylıklardan birisi de api hooking diyebiliriz. set_api() fonksiyonu ile bir api çağrıldığında programın nasıl bir yol izleyeceğine karar verebiliriz.</p>
+
+<pre>       
+    <code>
+        from qiling import *
+        from qiling.os.windows.fncc import *
+
+        def myWriteFile(ql,addr,params):
+            okunan = ql.mem.string(params["lpBuffer"])
+            print("okunan:",okunan)
+            ql.mem.string(params["lpBuffer"],"a"*len(okunan))
+            return addr,params
+
+        ql = Qiling(["hello.exe"], "examples/rootfs/x86_windows")
+        ql.filter = []
+        ql.set_api("WriteFile",myWriteFile,QL_INTERCEPT.ENTER)
+        ql.run()
+    </code>
+</pre>
+                    <p>Yukarıdaki scripti çalıştırırsak eğer uygulamamızın çalışması sırasında bir yerlerde WriteFİle apisi çağrılırsa program çalışmadan önce myWriteFile fonksiyonu çalışacaktır. Bu fonksiyonun sonunda adres ve parametreleri return ettik bunun sebebi bu fonksiyondan sonra programın hatasız bir şekilde çalışmasını sağlamak. ayrıca ql.filter = [] ile de gereksiz logları kapattık. scriptın çıktısı aşağıdaki gibidir.</p>
+
+                    <figure>
+                        <img src="../../assets/posts/uncategorized/qiling/image_2021-01-07_210431.png">
+                    </figure>
+                    <p>Dosyaya baktığımızda ise istediğimiz değerin yazılmış olduğunu görebiliriz.</p>
+                    <figure>
+                        <img src="../../assets/posts/uncategorized/qiling/image_2021-01-07_210531.png">
+                    </figure>
+
+                    <p>Yukarıdaki kodlarda dikkat çekmek istediğim bir nokta ise set_api() fonksiyonundaki QL_INTERCEPT.ENTER parametresidir. Dokümanlarda yoktu ancak kendi çıkarımıma göre fonksiyon çağrılmadan önce myWriteFile fonksiyonunu çağırıyor. QL_INTERCEPT.ENTER yerine QL_INTERCEPT.EXIT parametresini verirsek qiling hatasız bir şekilde çalışacaktır ancak dosyanın içerisine istediğimiz değişikliği uygulayamamaktadır. Buradan ise Fonksiyon çağrıldıktan sonra myWriteFile fonksiyonunu çalıştırdığı sonucuna varılabilir.</p>
+                    <p>Qilingin daha bir çok özelliği bulunmakta daha detaylı öğrenmek için aşağıdaki linklere göz atabilirsiniz.</p>
+
+                    <ul>
+                        <li>https://docs.qiling.io/en/latest/</li>
+                        <li>https://github.com/qilingframework/qiling</li>
+                        <li>https://github.com/N1ght-W0lf/QilingForMalwareAnalysis</li>
+                        <li>https://malware.news/t/automated-malware-unpacking-with-binary-emulation/40192</li>
+                    </ul>
+
+                </div>
+            </section>
+        </div>
+    </body>
+</html>

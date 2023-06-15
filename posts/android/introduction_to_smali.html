@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+
+<html>
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <title>muraterdem.org</title>
+        <meta name="keywords" content="exploitation, malware analysis, reverse engineering, mobile security, cyber security, programing, operation systems, linux, windows, android, information security,research">
+        <meta name="description" content="this blog contains my writes about reverse engineering, mobile security, exploitation, ASM, etc ">
+        <link rel="stylesheet" href="../../css/main.css"  >
+        
+    </head>
+    <body>
+        <div id="page_area">
+            <header>
+                <div>
+                    <h1 class="title">Murat ERDEM - Personal Research Blog</h1>
+                    <a class="social" href="https://www.linkedin.com/in/erdemmurat/">
+                        <img src="../../assets/linkedin.png">
+                    </a>
+                    <a class="social" href="https://github.com/moncasp">
+                        <img src="../../assets/github.png">
+                    </a>
+                </div>
+                <br><hr><br>
+            </header>
+
+            <section>
+                <div>
+                    <h1><b>Introduction To Smali</b></h1>
+                    <h5>August 23, 2020</h5>
+
+                    <p><a target="_blank" href="muraterdem.org">Önceki yazımızda</a> android işletim sisteminin çalışma prensibinden bahsetmiştik. Bu yazımızda ise bahsettiğimiz Dalvik sanal makinesinin içerisinde çalışan kodlara yakından bakacağız.</p>
+                    
+                    <h3>Smali Nedir?</h3>
+                    <p>Smali, apk’ların kaynak koduna yakın bir şekilde decompile edilmiş halidir. Tam olarak java kodları değildir apk’lar için her ne kadar decompile eden tool’lar geliştirilmiş olsa da bu araçlar tam anlamıyla java kaynak kodlarına dönüştüremeyebilirler bu nedenle bazı önemli noktaları apk dosyalarını analiz sırasında gözden kaçırabiliriz. Ancak smali kodları yürütülebilir makine kodları ile java kaynak kodları arasında bir yerde bulunmaktadır bu nedenle okunması java diline göre biraz zor olsa da makine dilini daha düzgün bir şekilde yorumlayarak çıktı verebilmektedir. Ayrıca obfuscate edilmiş apkları da yorumlayabilmektedir.</p>
+
+                    <h3>Smali kodlarını elde etmek</h3>
+
+                    <p>Bir uygulamanın smali kaynak kodlarını elde etmek için apktool aracını kullanabiliriz. Aşağıdaki komut ile hızlı bir şekilde smali kodlarını bizim için çıkartacaktır. </p>
+<pre>       
+    <code>
+        apktool d test.apk
+    </code>
+</pre>
+                    <figure>
+                        <img src="../../assets/posts/android/reading_smali/apktool_test_apk.png">
+                    </figure>
+
+                    <h3>Smalide Veri Tipleri</h3>
+                    <p>Smali kodlarında veri tipleri alışılmışın dışında tek harf ile gösterirler bunlar aşağıda listelenmiştir.</p>
+                    <ul>
+                        <li>V => Void</li>
+                        <li>Z => Boolean</li>
+                        <li>B => Byte</li>
+                        <li>S => Short</li>
+                        <li>C => Char</li>
+                        <li>I => Int</li>
+                        <li>J => Long</li>
+                        <li>F => Fload</li>
+                        <li>D => Double (64 bit)</li>
+                    </ul>
+
+                    <h3>Local Değişkenler Ve Parametreler</h3>
+                    <p>Bir smali koduna bakıldığında fonksiyonlar içerisinde kullanılan parametre ve local değişkenler görülebilir. Öncelikle parametrelerin kullanımını açıklayacak olursak parametreler “pX” ile temsil edilirler ve gönderilen her parametre arasında “;” işareti ile ayrılır p0 parametresi sınıfın referansı olan “this” ile eşleştirilmiştir bu nedenle fonksiyona verilen her parametre p1 ile başlayarak parametre sayısına göre eşleştirilirler.</p>
+                    <p>Local değişkeni fonksion başında “.local x” şeklinde tanımlanır bu nedenle bir fonksiyonda kaç adat local değişken kullanıldığı burada belirtilir. Ayrıca local değişkenler “vX” ile gösterilirler her oluşturulan local değişken v1,v2 gibi değerler ile eşleştirilir. Bazen “.local X” tanımlaması yerine “.registers X” tanımlaması yapılabilir bu tanımlamada x değeri this referansı dâhil olmak üzre verilen parametre sayısı ile fonksiyon içerisinde kullanılan local değişken sayılarının toplamını temsil etmektedir.</p>
+
+                    <h3>Smali Opcodları</h3>
+                    <p>Smali kütüphanelerinde kullanılmakta olan bazı opcodlar ve anlamlarını aşağıda gösterelim.</p>
+
+                    <table>
+                        <tr>
+                          <td>Invoke-super</td>
+                          <td>Üst sınıfın methodunu çağırır.</td>
+                        </tr>
+                        <tr>
+                          <td>New-instance vx</td>
+                          <td>Yeni bir örnek nesne oluşturur ve başvurusunu vx değişkenine atar.</td>
+                        </tr>
+                        <tr>
+                          <td>İnvoke-direct vx, vy</td>
+                          <td>vx nesnesinden vy parametresi ile bir nesne çağırır.</td>
+                        </tr>
+                        <tr>
+                            <td>Const-Sitring vx ,”test”</td>
+                            <td>vx değişkenine “test” stringini atar.</td>
+                        </tr>
+                        <tr>
+                            <td>İnvoke-virtual vx, vy</td>
+                            <td>vx nesnesinden sanal method çağırır ve vy parametresini gönderir.</td>
+                        </tr>
+                        <tr>
+                            <td>Return-void</td>
+                            <td>Void değer, döner</td>
+                        </tr>
+                    </table>
+
+                    <h3>Smali Method Tanımları</h3>
+
+                    <p>Şimdi örnek bir smali methoduna göz atacak olursak aşağıdaki kodlara benzer bir yapı göreceğiz.</p>
+
+                    <figure>
+                        <img src="../../assets/posts/android/reading_smali/smali_method.png">
+                    </figure>
+
+                    <p>Yukarıda “.method” tanımlaması ile bir method oluşturulmuş ve erişim yetkisi public olarak ayarlanmış bir constructor fonksiyonu olduğunu görebiliriz. Ayrıca hiç parametre almadığı ve dönüş tipinin Void (V) olduğunu anlamaktayız. Burada hiç parametre almasa bile p0 olarak tanımlanan “this” referansı olduğunu unutmayalım. Fonksiyonun iç kısmında ise “.local 1” tanımlaması ile bir adet local değişken kullanılmakta olduğunu görebiliriz.</p>
+
+                    <h3>Smali if – else Yapıları</h3>
+
+                    <p>Parogramlama dillerinin en önemli yapılarından olan ve karar verme işlemlerini yapan if-else yapıları smalideki küçük bir örneği aşağıdaki gibidir.</p>
+
+<pre>       
+    <code>
+        if-nez v0, :cond_0
+
+        const-string v2, "hello 1"
+
+        :goto_0
+        return-void
+
+        :cond_0
+        const-string v2, "hello 2"
+        goto :goto_0
+    </code>
+</pre>
+                    <p>Bu kod bloğunda eğer v0 sıfır değilse cond_0 tagına ,zıplayacak değilse aşağıya doğru okumaya devam edecektir. Bu kodun karşılığı aşağıdaki gibidir.</p>
+
+
+<pre>       
+    <code>
+        if (i == 0) {
+            s = "hello 1";
+        }
+        else {
+            s = "hello 2";
+        }
+        return;
+    </code>
+</pre>
+
+<p>Genel olarak smali kodlarının ne olduğundan ve nasıl okunduğundan bahsettik ancak bu kadar ile sınırlı değildir. Smali kodlarından bir uygulamayı analiz ederken karşımıza çıkan komutları İnternet üzerinde arama yaparak kolayca öğrenebiliriz. Benim smali için kullandığım web sitesini linkine <a href="http://pallergabor.uw.hu/androidblog/dalvik_opcodes.html" target="_blank">buradan</a> ulaşabilirsiniz.</p>
+
+
+                </div>
+            </section>
+        </div>
+    </body>
+</html>

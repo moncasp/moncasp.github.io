@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+
+<html>
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <title>muraterdem.org</title>
+        <meta name="keywords" content="exploitation, malware analysis, reverse engineering, mobile security, cyber security, programing, operation systems, linux, windows, android, information security,research">
+        <meta name="description" content="this blog contains my writes about reverse engineering, mobile security, exploitation, ASM, etc ">
+        <link rel="stylesheet" href="../../css/main.css"  >
+        
+    </head>
+    <body>
+        <div id="page_area">
+            <header>
+                <div>
+                    <h1 class="title">Murat ERDEM - Personal Research Blog</h1>
+                    <a class="social" href="https://www.linkedin.com/in/erdemmurat/">
+                        <img src="../../assets/linkedin.png">
+                    </a>
+                    <a class="social" href="https://github.com/moncasp">
+                        <img src="../../assets/github.png">
+                    </a>
+                </div>
+                <br><hr><br>
+            </header>
+
+            <section>
+                <div>
+                    <h1><b>Assembly Programing - 0x03: Temel Komutlar</b></h1>
+                    <h5>August 26, 2020</h5>
+
+                    <p>Assembly programlamada bazı temel komutlara bu yazımızda göz atacak ve komutların nasıl çalıştığını emu8086 üzerinde test edeceğiz.</p>
+
+                    <h3>Değişken tanımlama</h3>
+                    <p>Assembly programlamada değişken tanımlama aşağıdaki şekillerde yapılabilir.</p>
+                    <br>
+                    <table>
+                        <tr>
+                            <td>DB</td>
+                            <td>Her karakteri 8 bitlik alana yazar</td>
+                        </tr>
+                        <tr>
+                            <td>DW</td>
+                            <td>Her karakteri 16 bitlik alana yazar</td>
+                        </tr>
+                        <tr>
+                            <td>DD</td>
+                            <td>Her karakteri 32 bitlik alana yazar</td>
+                        </tr>
+                    </table>
+                    <br>
+
+                    <p>Bu tanımlamalar DS içerisinde yapılır aşağıda bir örnek gösterilmiştir.</p>
+<pre>       
+    <code>
+        .data
+
+        bir db 1h
+        iki dw 2h
+        uc dd 3h 
+        dort db 4h
+    </code>
+</pre>
+
+                    <p>Bu tanımlamayı yaptıktan sonra emulatörü çalıştırıp .startup ta yapılan DS tanımlaması atladıktan sonra memory üzerinde DS registerindeki adrese gidersek aşağıdaki gibi bir görüntü elde ederiz.</p>
+                    <figure>
+                        <img src="../../assets/posts/assembly_programing/ds_tanim.png">
+                    </figure>
+
+                    <p>Yukarıdaki resme dikkatli bakacak olursak DS tanımlaması yapıldıktan sonra memoryde DS registerinin içerisindeki adrese gidersek burada bizim tanımlamalarımızın arka arkaya sıralandığını görürüz.</p>
+                    <p>Burada ilk tanımlamamız bir 0712:0000 adresine yazılmış 8 bitlik bir alana yazılmış. İkinci tanımlamamız olan iki hemen arkasına yazılmış ancak 16 bitlik bir alana yazılmaya çalışıldığını görebiliriz. Kendisi 8 bit ile ifade edilebildiği için hemen sonrasına 8 bitlik bir alan sıfırlar ile doldurulmuş.Aynı şekilde uc tanımlaması da 32 bitlik bir alana yazılamaya çalışılmış.</p>
+
+                    <h3>Köşeli Parantezler [..]</h3>
+                    <p>Biz bir adresi registere yazdıktan sonra registerdeki adreste bulunan bir veriye ulaşmak için registerde tutulan değerin bir adres olduğunu belirmemiz gerekir aksi halde registerin içerisindeki adres değeri ile işlem yapacaktır. Bu belirme için köşeli parantez kullanılır.</p>
+                    <br>
+                    <table>
+                        <tr>
+                            <td>eax</td>
+                            <td>eax registerinin içindeki değeri ile işlem yapar</td>
+                        </tr>
+                        <tr>
+                            <td>[eax]</td>
+                            <td>eax registerinin içinde bir adres olduğunu bilir ve bu adrese gider oradaki veri üzerinden işlem yapar.</td>
+                        </tr>
+                    </table>
+                    <br>
+                    
+                    <h3>PTR Komutları</h3>
+                    <p>Biz bellek üzerinden değer okuduğumuzda kaç bitlik bir değer okuyacağımızı ayarlamak için bu komutlardan faydalanırız.</p>
+                    <br>
+                    <table>
+                        <tr>
+                            <td>byte ptr</td>
+                            <td>8 bit boyutunda veri okur</td>
+                        </tr>
+                        <tr>
+                            <td>word ptr</td>
+                            <td>16 bit boyutunda veri okur</td>
+                        </tr>
+                        <tr>
+                            <td>dword ptr</td>
+                            <td>32 bit boyutunda veri okur</td>
+                        </tr>
+                    </table>
+                    <br>
+<pre>       
+    <code>
+        #isim = "muraterdem"
+        mov ax,word ptr isim
+        mov bl, isim
+    </code>
+</pre>                    
+
+                    <p>Yukarıdaki kod çalıştırıldığında ax registerine “mu” harflerini hex karşılıklarını, bl registerine “m” harfinin hex karşılığını yazacaktır.</p>
+
+                    <h3>DUP(..) ve Soru İşareti (?)</h3>
+<pre>       
+    <code>
+        .data
+
+        tekrar db 5 dup("m")
+        rezerve db ?
+    </code>
+</pre>
+                    <p>Örnek olarak DS içerisinde bu şekilde bir tanımlama yaparsak m harfinden 5 adet arka arkaya yazacaktır. Sonuna ise 8 bitlik içerisinde null değer olan bir alan ayıracaktır.</p>
+
+                    <h3>MOV</h3>
+                    <p>MOV komutu registerden registere, Bellekten registere yada registerden belleğe veri kopyalama işlemlerinde kullanılır kullanımı aşağıdaki gibidir.</p>
+<pre>       
+    <code>
+        mov ax,bx
+        mov ax,[bx]
+        mov [bx],ax
+    </code>
+</pre>
+
+                    <h3>LEA</h3>
+                    <p>LEA komutu bir değişkeninin adresini almak için kullanılır, LEA komutu yerine mov komutu ile offset komutu birlikte kullanılabilir. Aşağıdaki iki komutta var_1 değişkeninin adresini ax registerine atar.</p>
+<pre>       
+    <code>
+        LEA ax,var_1
+        MOV ax, offset var_1
+    </code>
+</pre>
+
+                    <h3>ADD</h3>
+                    <p>CF te bulunan değeri dikkate almadan toplama işlemi yapar.</p>
+<pre>       
+    <code>
+        ADD ax,5
+        ADD ax,1234h
+    </code>
+</pre>
+
+                    <h3>ADC</h3>
+                    <p>CF de bulunan değer, dikkate alarak toplama işlemi yapar.</p>
+<pre>       
+    <code>
+        ADC ax, 5h
+    </code>
+</pre>
+
+                    <h3>SUB</h3>
+                    <p>CF de bulunan değeri dikkate almadan çıkarma işlemi yapar.</p>
+<pre>       
+    <code>
+        SUB  ax,5h
+    </code>
+</pre>                    
+
+                    <h3>SBB</h3>
+                    <p>CF de bulunan değeri dikkate alarak çıkarma işlemi yapar.</p>
+<pre>       
+    <code>
+        SBB ax,5h
+    </code>
+</pre> 
+
+                    <h3>MUL</h3>
+                    <p>işaretsiz sayılar için çarpma işlemi yapar. Bu komutun kullanımı biraz farklıdır, öncelikle çarpanlardan birisini ax registerine atarız diğerini diğer registerlerden birini atarız örnek olarak bx’e. Daha sonra mul komutunu aşağıdaki gibi kullanabiliriz. Bu komut çalıştığında dx:ax tek bir register gibi kullanılarak çıkan sonuç buraya yazılır.</p>
+<pre>       
+    <code>
+        mov ax,2
+        mov bx,5
+        mul bx
+        #ax = a
+    </code>
+</pre>
+
+                    <h3>IMUL</h3>
+                    <p>İşaretli sayılarda çarpma işlemi yapar. mul komutundan çok farklı değildir.</p>
+<pre>       
+    <code>
+        mov ax,-2
+        mov bx, 5
+        imul bx
+        #ax = FFF6
+    </code>
+</pre>
+
+                    <h3>DIV</h3>
+                    <p>İşaretsiz sayılarda bölme işlemi yapar. Kullanımı ve değerlerin yazıldığı registerler aşağıdaki gibidir.</p>
+
+                    <br>
+                    <table>
+                        <tr>
+                            <th>Komut</th>
+                            <th>Bölünen Değer</th>
+                            <th>Bölen Değer</th>
+                            <th>Bölüm</th>
+                            <th>Kalan</th>
+                        </tr>
+                        <tr>
+                            <td>div cl</td>
+                            <td>ax</td>
+                            <td>bayt (8bit)</td>
+                            <td>al</td>
+                            <td>ah</td>
+                        </tr>
+                        <tr>
+                            <td>div cl</td>
+                            <td>dx,ax</td>
+                            <td>word (16 bit)</td>
+                            <td>ax</td>
+                            <td>dx</td>
+                        </tr>
+                        <tr>
+                            <td>div ebx</td>
+                            <td>edx:eax</td>
+                            <td>double word (32 bit)</td>
+                            <td>eax</td>
+                            <td>edx</td>
+                        </tr>
+                    </table>
+                    <br>
+
+
+                    <h3>IDIV</h3>
+                    <p>İşaretli sayılarda bölme işlemi yapar. div komutu gibi çalışır.</p>
+
+                    <h3>INC</h3>
+                    <p>Verilen operandın değerini bir arttırır.</p>
+<pre>       
+    <code>
+        inc ax
+    </code>
+</pre>
+
+
+                    <h3>DEC</h3>
+                    <p>Verilen operandın değerini bir azaltır.</p>
+<pre>       
+    <code>
+        dec ax
+    </code>
+</pre>
+
+                    <h3>AND</h3>
+                    <p>Mantıksal olarak ve işlemi yapar.</p>
+<pre>       
+    <code>
+        and al,0fh
+    </code>
+</pre>
+
+                    <h3>OR</h3>
+                    <p>Mantıksal olarak or işlemi yapar.</p>
+<pre>       
+    <code>
+        or al,ofh
+    </code>
+</pre>
+
+                    <h3>XOR</h3>
+                    <p>Mantıksal olarak xor işlemi yapar.</p>
+<pre>       
+    <code>
+        xor ax, 33h
+    </code>
+</pre>
+
+                    <h3>NOT</h3>
+                    <p>Mantıksal olarak değil işlemi yapar.</p>
+<pre>       
+    <code>
+        not ax
+        not [ax]
+    </code>
+</pre>
+
+                    <h3>TEST</h3>
+                    <p>Mantıksal olarak and işlemi yapar. and işlemi ile arasındaki fark, and işlemi operand olarak verilen registerin içeriğini değiştirirken test işlemi sadece flagları set eder registerin içeriğine dokunmaz.</p>
+
+                    <h3>SHR</h3>
+                    <p>İkilik tabanda bitleri belirtilen değer kadar msb bitinden lsb bitine doğru kaydırır her kaydırmada msb bitine 0 değeri lsb bitinde bulunan değeri ise cf içerisine atar. Burada n kaydırmanın 2^n değerine sayıyı bölmek anlamına geldiğine dikkat etmek gerekir.</p>
+<pre>       
+    <code>
+        mov al,11111111b
+        shr al,5
+    </code>
+</pre>
+
+                    <h3>SHL</h3>
+                    <p>SHR ile aynı işlemi yapar tek farkı yönü lsb bitinden msb bitine doğrudur.</p>
+
+                    <h3>SAR</h3>
+                    <p>Bu komut ikilik tabanda bitleri msb bitinden lsb bitine doğru kaydırır kaydırma sırasında msb bitinin değeri sabit kalarak, lsb biti cf değerine atanır.</p>
+<pre>       
+    <code>
+        mov al,01101010b
+        sar al,5
+    </code>
+</pre>
+
+                    <h3>SAL</h3>
+                    <p>SAR ile aynı işlemi yapar farkı lsb bitini sabit tutarak, lsb bitinden msb bitine doğru kaydırma yapar msb değerindeki biti cf değerine atar.</p>
+<pre>       
+    <code>
+        mov al,01101010b
+        sal al,5
+    </code>
+</pre>
+
+                    <h3>ROR</h3>
+                    <p>Bu komut msb bitinden lsb bitine doğru kaydırma yapar, lsb bitindeki veriyi hem cf hemde msb bitine aktarır bu şekilde sayılar kaybolmaz.</p>
+<pre>       
+    <code>
+        mov al,01101010b
+        ror al,5
+    </code>
+</pre>
+
+                    <h3>ROL</h3>
+                    <p>ROR komutu ile aynı işlemi yapar. Farkı ise lsb den msb ye doğru kaydırma yapar.</p>
+<pre>       
+    <code>
+        mov al,01101010b
+        ror al,5
+    </code>
+</pre>
+
+                    <h3>RCR</h3>
+                    <p>Bu komutu ror gibi çalışır ancak farkı cf registerini de sistemin bir parçası gibi görüp 9. bitmiş gibi kaydırma yapar. msb den lsb bitine doğru kaydırma yapar. LSB bitindeki değeri cf registerine, cf değerini msb bitine yazar.</p>
+<pre>       
+    <code>
+        mov al,01101010b
+        rcr al,5
+    </code>
+</pre>
+
+                    <h3>RCL</h3>
+                    <p>RCR komutunun tershalidir. msb bitini cf’e cf değerini lsb bitine yazar.</p>
+<pre>       
+    <code>
+        mov al,01101010b
+        rcl al,5
+    </code>
+</pre>
+
+                    <h3>HLT</h3>
+                    <p>Program çalışırken bu komut işlenirse program beklemeye alınır.</p>
+<pre>       
+    <code>
+        hlt
+    </code>
+</pre>
+                </div>
+            </section>
+        </div>
+    </body>
+</html>

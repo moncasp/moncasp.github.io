@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+
+<html>
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <title>muraterdem.org</title>
+        <meta name="keywords" content="exploitation, malware analysis, reverse engineering, mobile security, cyber security, programing, operation systems, linux, windows, android, information security,research">
+        <meta name="description" content="this blog contains my writes about reverse engineering, mobile security, exploitation, ASM, etc ">
+        <link rel="stylesheet" href="../../css/main.css"  >
+        
+    </head>
+    <body>
+        <div id="page_area">
+            <header>
+                <div>
+                    <h1 class="title">Murat ERDEM - Personal Research Blog</h1>
+                    <a class="social" href="https://www.linkedin.com/in/erdemmurat/">
+                        <img src="../../assets/linkedin.png">
+                    </a>
+                    <a class="social" href="https://github.com/moncasp">
+                        <img src="../../assets/github.png">
+                    </a>
+                </div>
+                <br><hr><br>
+            </header>
+
+            <section>
+                <div>
+                    <h1><b>PE Files - 0x05</b></h1>
+                    <h5>August 2, 2020</h5>
+
+                    <p>En son File Header alanındaki verilere ulaşmıştık, şimdi ise Optional Header alanı içerisindeki verilerden söz edeceğiz.</p>
+
+                    <p>Öncelikle bu alan içerisinde önemli verilerin tutulduğu alanlardan birisidir. Optional Header içerisinde işletim sistemi sürümü ve programın entry pointi gibi verileri bulundurur. bu alanın bilgilerini almak için kullanacağımız yapı IMAGE_OPTIONAL_HEADER yapısıdır.</p>
+
+                    <figure>
+                        <img src="../../assets/posts/pe_files/image_optional_header.png">
+                    </figure>
+
+                    <p>Bu alan içerisinde ikiye ayrılır. standart kısmı executable dosyaların ortak kullandığı Ortak Nesne Dosya Biçimi (COFF) için ortak alanlardır. Bu alanlar içerisinde en önemli olanı AddressOfEntryPoint değerini bu değer bir programın ilk nereden çalıştırılmaya başlayacağını gösterir.</p>
+                    <p>Ek alanlar ise yazmış olduğumuz executable dosyalara ek özellikler kazandırmayı sağlar buradaki değerleri biraz açıklayacak olursak bunların önemini daha iyi anlayabiliriz.</p>
+
+                    <h3>Imagebase</h3>
+                    <p>Bu alan bildiğimiz gibi dosyanın memory üzerinde yükleneceği adresi belirtir ve default değer olarak 0x00400000 alır.</p>
+                    <h3>SectionAlignment</h3>
+                    <p>Bu değer dosyamızdaki section boyutlarının tutarak bellek üzerinde fazla yer ayrılıp gereksiz performans kaybı yaşanmasını engeller.</p>
+                    <h3>MajorOperationSystemVersion</h3>
+                    <p>İşletim sisteminin majör versiyonunu gösterir.</p>
+                    <h3>MinorOperationSystemVersion</h3>
+                    <p>İşlerim sisteminin minör versiyonunu gösterir.</p>
+                    <p>Majör ve minör versiyonlar kullanılarak bir işletim sisteminin versiyonu belirlenebilir. Örnek olarak 6.3.9600 olarak gösterilen bir işletim sistemi versiyonunda majör id 6, minor id 3, ve build id 9600 olarak gösterilebilir. Aşağıdaki tablodan ise bu sistemin bir windows 8.1 olduğunu görebiliriz.</p>
+
+                    <figure>
+                        <img src="../../assets/posts/pe_files/versions.png">
+                    </figure>
+
+
+                    <h3>SizeOfImage</h3>
+                    <p>Bu değer PE dosyasının mermory üzerindeki kapladığı alan boyutunu tutar.</p>
+                    <h3>SizeOfHeader</h3>
+                    <p>Bu alanda PE file header, Optional header gibi header ile ilgili bölümler bulunur.</p>
+                    <h3>Subsystem</h3>
+                    <p>Hangi işletim sistemi üzerinde çalışacağını belirtir.</p>
+                    <h3>DLLCharacteristics</h3>
+                    <p>Bu değer program içerisinde kullanılmak üzre import edilen DLL dosyalarının başlangıç ve bitiş adreslerini tutar.</p>
+                    <h3>LoaderFlags</h3>
+                    <p>Bu flag değerleri dosyanın debug,default yada break olarak hangi amaç ile yükleneceğini belirtir.</p>
+                    <h3>DataDrectory</h3>
+                    <p>Bu alan bizim için oldukça önemlidir. Executable dosyalar için import edilen önemli dosya bileşenlerin import yolunu gösterir. PE dosyamız dışarıdan bir dosyaya erişmek istediğin de bu yollar üzerinden ulaşır. bu alanın içerisindeki bilgilere erişmek için IMAGE_DATA_DIRECTORY yapısı kullanılabilir.</p>
+                    <figure>
+                        <img src="../../assets/posts/pe_files/data_directory.png">
+                    </figure>
+
+                    <p>Bu alan aslında bir dizi şeklinde sıralanmıştır. İçerisindeki verilere erişim için indekslerini kullanmamız gerekmektedir. Bu indeks sayısı IMAGE_NUMBEROF_DIRECTORY_ENRIES olarak tanımlanır. ve indekse karşılık gelen veri yolu aşağıdaki gibidir.</p>
+                    <figure>
+                        <img src="../../assets/posts/pe_files/index_of_imports.png">
+                        <figcaption>(Yukarıdan aşağı sıralı şekilde gösterilmiştir.)</figcaption>
+                    </figure>
+                    <p>Bu alanın önemini yeterince anladıysak kodlama kısmında bu alanların ansıl elde edildiğine bakalım öncelikle Optional Header bilgilerini elde etmemiz gerekiyor bunun için aşağıdaki kodu kullanabiliriz.</p>
+<pre>
+    <code>
+        IMAGE_OPTIONAL_HEADER optionalHeader = (IMAGE_OPTIONAL_HEADER)ntheader->OptionalHeader;
+        optionalHeaderWriter(optionalHeader);
+    </code>
+</pre>
+                    <p>Burada tanımladığımız optionalHeaderWriter fonksiyonu gerekli bilgileri ekrana yazmak için kullanıyoruz. Bu fonksiyon içeriği aşağıdaki gibidir.</p>
+
+<pre>
+    <code>
+        void optionalHeaderWriter(IMAGE_OPTIONAL_HEADER optionalHeader) {
+            cout << endl << "______PIMAGE_OPTIONAL_HEADER______" << endl;
+            cout << "Magic : " << hex << optionalHeader.Magic << endl;
+            cout << "MajorLinkerVersion : " << hex << setw(2) << setfill('0') << (int)optionalHeader.MajorLinkerVersion << endl;
+            cout << "MinorLinkerVersion : " << hex << setw(2) << setfill('0') << (int)optionalHeader.MinorLinkerVersion << endl;
+            cout << "SizeOfCode : " << hex << optionalHeader.SizeOfCode << endl;
+            cout << "SizeOfInitializedData : " << hex << optionalHeader.SizeOfInitializedData << endl;
+            cout << "SizeOfUninitializedData : " << hex << optionalHeader.SizeOfUninitializedData << endl;
+            cout << "AddressOfEntryPoint : " << hex << optionalHeader.AddressOfEntryPoint << endl;
+            cout << "BaseOfCode : " << hex << optionalHeader.BaseOfCode << endl;
+            cout << "BaseOfData : " << hex << optionalHeader.BaseOfData << endl;
+            cout << "--------------------------------" << endl;
+            cout << "ImageBase : " << hex << optionalHeader.ImageBase << endl;
+            cout << "SectionAlignment : " << hex << optionalHeader.SectionAlignment << endl;
+            cout << "MajorOperatingSystemVersion : " << hex << optionalHeader.MajorOperatingSystemVersion << endl;
+            cout << "MinorOperatingSystemVersion : " << hex << optionalHeader.MinorOperatingSystemVersion << endl;
+            cout << "MajorImageVersion : " << hex << optionalHeader.MajorImageVersion << endl;
+            cout << "MinorImageVersion : " << hex << optionalHeader.MinorImageVersion << endl;
+            cout << "MajorSubsystemVersion : " << hex << optionalHeader.MajorSubsystemVersion << endl;
+            cout << "MinorSubsystemVersion : " << hex << optionalHeader.MinorSubsystemVersion << endl;
+            cout << "Win32VersionValue : " << hex << optionalHeader.Win32VersionValue << endl;
+            cout << "SizeOfImage : " << hex << optionalHeader.SizeOfImage << endl;
+            cout << "SizeOfHeaders : " << hex << optionalHeader.SizeOfHeaders << endl;
+            cout << "CheckSum : " << hex << optionalHeader.CheckSum << endl;
+            cout << "Subsystem : " << hex << optionalHeader.Subsystem << endl;
+            cout << "DllCharacteristics : " << hex << optionalHeader.DllCharacteristics << endl;
+            cout << "SizeOfStackReserve : " << hex << optionalHeader.SizeOfStackReserve << endl;
+            cout << "SizeOfStackCommit : " << hex << optionalHeader.SizeOfStackCommit << endl;
+            cout << "SizeOfHeapReserve : " << hex << optionalHeader.SizeOfHeapReserve << endl;
+            cout << "SizeOfHeapCommit : " << hex << optionalHeader.SizeOfHeapCommit << endl;
+            cout << "LoaderFlags : " << hex << optionalHeader.LoaderFlags << endl;
+            cout << "NumberOfRvaAndSizes : " << hex << optionalHeader.NumberOfRvaAndSizes << endl;
+            cout << "--------------------------------" << endl;
+            for (int i = 0; i < IMAGE_NUMBEROF_DIRECTORY_ENTRIES; i++) {
+                IMAGE_DATA_DIRECTORY dataDirectory = (IMAGE_DATA_DIRECTORY)optionalHeader.DataDirectory[i];
+                int size = dataDirectory.Size;
+                if (size != 0) {
+                    cout << "-------" << i << "------------" << endl;
+                    cout << "VirtualAddress : " << hex << dataDirectory.VirtualAddress << endl;
+                    cout << "Size : " << hex << dataDirectory.Size << endl << endl;
+                }
+            }
+            cout << endl << endl << endl;
+        }
+    </code>
+</pre>
+                    <p>Bu fonksiyonda MajorLinkerVersion ve MinorLinkerVersion veri tipleri byte olduğu için bazı eklemeler yapmam gerekti ve bu eklemeleri kullanabilmek için iomanip kütüphanesini projeme dahil ettim. Bu fonksiyon içerisinde dahil edilen dosya yollarının bulunduğu değerleri indeks değeri ile birlikte yazdırmış olduk. Bu programı çalıştırıp çıktısına bakacak olursak aşağıdaki gibi olacaktır.</p>
+                    
+                    <figure>
+                        <img src="../../assets/posts/pe_files/optional_header_cikti.png">
+                    </figure>
+
+                </div>
+            </section>
+        </div>
+    </body>
+</html>

@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+
+<html>
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <title>muraterdem.org</title>
+        <meta name="keywords" content="exploitation, malware analysis, reverse engineering, mobile security, cyber security, programing, operation systems, linux, windows, android, information security,research">
+        <meta name="description" content="this blog contains my writes about reverse engineering, mobile security, exploitation, ASM, etc ">
+        <link rel="stylesheet" href="../../css/main.css"  >
+        
+    </head>
+    <body>
+        <div id="page_area">
+            <header>
+                <div>
+                    <h1 class="title">Murat ERDEM - Personal Research Blog</h1>
+                    <a class="social" href="https://www.linkedin.com/in/erdemmurat/">
+                        <img src="../../assets/linkedin.png">
+                    </a>
+                    <a class="social" href="https://github.com/moncasp">
+                        <img src="../../assets/github.png">
+                    </a>
+                </div>
+                <br><hr><br>
+            </header>
+
+            <section>
+                <div>
+                    <h1><b>PE Files - 0x06</b></h1>
+                    <h5>August 05, 2020</h5>
+
+                    <p>Bu bölümde artık bahsettiğimiz sectionların görevleri ve önemini anlayacağız.</p>
+
+                    <figure>
+                        <img src="../../assets/posts/pe_files/cff_headers.png">
+                    </figure>
+
+                    <p>Öncelikle CFF’e bakacak olursak Section Header alanının Optional Header alanından hemen sonra geldiğini görebiliriz. PE dosyalarında da konumu Optional Headerin hemen sonrasıdır. Bu alana erişmek için basit bir matematik yapmamız gerekecek. Kodlama kısmından önce bu alanda ne bulunduğunda bakalım.</p>
+                    <p>Bu alan aslında 40 byte uzunluğunda arka arkaya sıralanmış yapılardır. File Header kısmında kaç adet section olduğunu tespit etmiştik. Bu alan o sectionların genel bilgisini tutan kısımdır ve aşağıdaki gibi tanımlanırlar.</p>
+                    <figure>
+                        <img src="../../assets/posts/pe_files/section_header_struct.png">
+                    </figure>
+
+                    <p>Bu verilerden VirtualAddress bizim için belki en önemlilerindendir. Bu adres bize bu sectionun bellek üzeriden nereye yükleneceğini belirtir ancak DLL’ler bu kurala uymayabilirler. Bir diğer önemli alan PointerToRawData adresidir bu belleğe yüklenecek verilerin tutulduğu adresi göstermektedir.</p>
+                    <p>Section Headerin başlangıç noktasına ulaşamak için basit bir matematik işlemi yapacağımızı söylemiştik şimdi öncelikle bizim IMAGE_NT_HEADERS32 tipinde bir ntheader değişkenimiz vardı. Bu adresten sonra DWORD tipinde bir PE imzamız ve IMAGE_FILE_HEADER tipinde bir yapımız vardı bunlara ek olarak IMAGE_OPTIONAL_HEADER yapımız vardı ve bunun içerisindeki verilerin olup olmayacağı konusunda kesin bir şey söylemek zordu ancak bu yapının boyutu IMAGE_FILE_HEADER içerisinde tanımlı olarak bulunmaktaydı biz bu yapıların boyutu kadar IMAGE_NT_HEADERS32 adresinden ilerlersek Section headerin ilk tanımlı olduğu adrese ulaşabilriz. Bunu yapan kod aşağıdaki gibidir.</p>
+
+<pre>
+    <code>
+        DWORD sectionPoint = (DWORD)ntheader + sizeof(DWORD) + (DWORD)sizeof(IMAGE_FILE_HEADER) + (DWORD)imageFileHeader.SizeOfOptionalHeader;
+    </code>
+</pre>
+
+                    <p>Bu adres bizim ilk noktamızı temsil etmekte buradan sonra header bilgilerini ekrana yazdırabiliriz.</p>
+
+
+
+<pre>
+    <code>
+        cout << endl << "______PIMAGE_SECTION_HEADER______" << endl;
+        for (int i = 0; i < imageFileHeader.NumberOfSections; i++) {
+            PIMAGE_SECTION_HEADER sectionHeader = (PIMAGE_SECTION_HEADER)sectionPoint;
+            sectionHeaderWriter(sectionHeader);
+            sectionPoint += (DWORD)sizeof(IMAGE_SECTION_HEADER);
+        }
+    </code>
+</pre>
+
+                    <p>Burada ekrana yazdırmak için sectionHeaderWriter fonksiyonunu kullandık daha sonra ise bir sonraki section değerine zıplamak için section header boyutu kadar adresimizde ileriye gittik. sectionHeaderWriter fonksiyonu aşağıdaki gibidir.</p>
+
+
+<pre>
+    <code>
+        void sectionHeaderWriter(PIMAGE_SECTION_HEADER sectionHeader) {
+            cout << "Name : " << hex << sectionHeader->Name << endl;
+            cout << "Misc PhysicalAddress : " << hex << sectionHeader->Misc.PhysicalAddress << endl;
+            cout << "Misc VirtualSize : " << hex << sectionHeader->Misc.VirtualSize << endl;
+            cout << "VirtualAddress : " << hex << sectionHeader->VirtualAddress << endl;
+            cout << "SizeOfRawData : " << hex << sectionHeader->SizeOfRawData << endl;
+            cout << "PointerToRawData : " << hex << sectionHeader->PointerToRawData << endl;
+            cout << "PointerToRelocations : " << hex << sectionHeader->PointerToRelocations << endl;
+            cout << "PointerToLinenumbers : " << hex << sectionHeader->PointerToLinenumbers << endl;
+            cout << "NumberOfRelocations : " << hex << sectionHeader->NumberOfRelocations << endl;
+            cout << "NumberOfLinenumbers : " << hex << sectionHeader->NumberOfLinenumbers << endl;
+            cout << "Characteristics : " << hex << sectionHeader->Characteristics << endl;
+            cout << endl << endl << endl;
+        }
+    </code>
+</pre>
+
+                    <p>Bir sectionun yapısı genel olarak bu şekilde ifade edilebilir. Birde bu section türlerinin ne işe yaradığına bakalım.</p>
+                    <p>Windows sistemlerde genel olarak dokuz adet ön tanımlı sectionu vardır. Ancak bunların hepsi bir uygulamada olmak zorunda değildir uygulama ihtiyaç duyduğu kadar section oluşturur. gereksinim duyarsa dokuzdan daha fazlasını da kullanabilir.</p>
+
+                    <h3>.text sectionu</h3>
+                    <p>Bu section “executable code section” olarak bilinir ve uygulamanın yürütülebilir kodları bu alanda bulunur.</p>
+                    <h3>bss, .data, .rdata (Data Sections)</h3>
+                    <p>.bss sectionunda programın statik olarak tanımlı verileri tutulur.</p>
+                    <p>.data sectionunda program tarafından erişilebilen global değişkenler tutulur.</p>
+                    <p>.rdata sectionunda sadece okuma yetkisi olan veriler tutulur.</p>
+                    <h3>.rsrc sectionu (Resource)</h3>
+                    <p>Bu section alanında programın kullanacağı dosyalar bulunur. Bu bölüm ağaç yapısında tanımlanmıştır.</p>
+                    
+                    <figure>
+                        <img src="../../assets/posts/pe_files/resource_tree_clear.png">
+                    </figure>
+
+                    <p>Bu yapının ilk katmınında ihtiyac duyulan dosyanın tipine göre ayrım yapılır bu kök alan IMAGE_RESOURCE_DIRECTORY olarak tanımlanmıştır. Burada tipten kasıt menu, icon, string gibi erişilmek istenen dosyanın tipidir. Bu alanlar da arka arkaya sıralanmış haldedir.</p>
+
+                    <figure>
+                        <img src="../../assets/posts/pe_files/image_resource_directory.png">
+                    </figure>
+
+                    <p>Burada hangi tip dosyaya erişilmek istendiği kararlaştırıldıktan sonra bir alt ağaçta hangi dosyanın istendiğini bulmak için isim karşılaştırması yapılır bu alanın tanımlanması aşağıdaki gibir.</p>
+
+
+                    <figure>
+                        <img src="../../assets/posts/pe_files/image_resorce_directory_enry.png">
+                    </figure>
+
+                    <p>Burada dosya ismi benzersizdir hedef dosyayı doğru bir şekilde bulmak için kullanılır. Dosya doğru bir şekilde tespit edildikten sonra konumunu bulmak için IMAGE_RESOURCE_DATA_ENTRY yapısı kullanılmaktadır bu yapı aşağıdaki gibi tanımlanmıştır.</p>
+
+                    <figure>
+                        <img src="../../assets/posts/pe_files/Image_resource_data_entriy.png">
+                    </figure>
+
+                    <p>Bu yapıda OffsetToData resource’un adresini, Size de boyutunu tutar. Burada dikkat etmemiz gereken nokta OffsetToData adresi Image Base adresine göre değil resource’un kök dizininin ilk pointine olan uzaklığını temsil etmektedir.</p>
+
+                    <h3>.edata section</h3>
+                    <p>Bu bölüm export edilecek olan veri dizinlerini içerir. yapısı IMAGE_EXPORT_DIRECTORY olarak aşağıdaki şekilde tanımlanmıştır.</p>
+
+                    <figure>
+                        <img src="../../assets/posts/pe_files/image_expor_directory.png">
+                    </figure>
+
+                    <p>Bu yapıda;</p>
+                    <p>Name: yürütülebilir dosya adını,</p>
+                    <p>NumberOfNames: modülde bulunan export edilecek olan fonksiyon isimlerini,</p>
+                    <p>NumberOfFunctions: export edilecek fonksiyon sayısını,</p>
+                    <p>AddressOfFunctions: export edilecek fonksiyon adreslerinin tutulduğu bir listeyi,</p>
+                    <p>AddressOfNames: dışa aktarılan fonksiyonların isimlerinin tutuluğu listenin offset adresini tutar.</p>
+                    <p>AddressOfNameOrdinals: AddresOfNames deki isimlerin sıra değerini tutan bir listenini offsetidir. Listenin her bir elemanı 2 byte boyutundadır.</p>
+
+                    <h3>.idata section (Import Data Section)</h3>
+                    <p>Bu bölümde import edilen veriler import addres name table ve diğer dâhil edilen veriler bulunur.</p>
+
+                    <h3>debug section</h3>
+                    <p>Normalde hata ayıklama bilgileri rdata sectionunda bulunur ama program çalışmaya başladığında bu bölüme yüklenirler. Bu bölümün tanımı aşağıdaki gibidir.</p>
+                    <figure>
+                        <img src="../../assets/posts/pe_files/debug_directory.png">
+                    </figure>
+                    <p>Bu yapıda AddressOfRawData bellek üzerindeki adresi PointerToRawData PE dosyası üzerindeki adresi göstermektedir. Buradaki hata ayıklama dosyaları .DBG uzantılı dosyalar olarak dışarıya çıkartılabilir. Ayrıca hata ayıklama tipleri ise aşağıdaki gibi tanımlanmaktadır.</p>
+                    <figure>
+                        <img src="../../assets/posts/pe_files/debug_type.png">
+                    </figure>
+                    <p>Bir PE dosyasının genel yapısını bu şekilde açıklayabiliriz buraya kadar gördüklerimizi tekrar gözden geçirecek olursak detaylı yapısı aşağıdaki gibi ifade edilebilir.</p>
+                    <figure>
+                        <img src="../../assets/posts/pe_files/general_struct.png">
+                    </figure>
+
+
+                </div>
+            </section>
+        </div>
+    </body>
+</html>

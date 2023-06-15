@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+
+<html>
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <title>muraterdem.org</title>
+        <meta name="keywords" content="exploitation, malware analysis, reverse engineering, mobile security, cyber security, programing, operation systems, linux, windows, android, information security,research">
+        <meta name="description" content="this blog contains my writes about reverse engineering, mobile security, exploitation, ASM, etc ">
+        <link rel="stylesheet" href="../../css/main.css"  >
+        
+    </head>
+    <body>
+        <div id="page_area">
+            <header>
+                <div>
+                    <h1 class="title">Murat ERDEM - Personal Research Blog</h1>
+                    <a class="social" href="https://www.linkedin.com/in/erdemmurat/">
+                        <img src="../../assets/linkedin.png">
+                    </a>
+                    <a class="social" href="https://github.com/moncasp">
+                        <img src="../../assets/github.png">
+                    </a>
+                </div>
+                <br><hr><br>
+            </header>
+
+            <section>
+                <div>
+                    <h1><b>Assembly Programing - 0x01: Register</b></h1>
+                    <h5>August 24, 2020</h5>
+                    
+                    <p>Bu yazımızda Assembly programlamaya küçük bir giriş yapacak ve assemblyde kullanılan registerler hakkında biraz bilgi edineceğiz.</p>
+                    <p>Assemblyde unutulmaması gereken en önemli nokta her şeyin 1 ve 0 lardan oluştuğu ve programlama yaparken her şeyi binary sisteme göre düşünmek gerektiğidir.</p>
+                    <p>Asemmbly de temel olarak EAX, EBX, ECX, EDX, EBP, ESP, ESI, EDI, EIP, CS, DS, SS, ES, FS, GS ve EFLAGS olmak üzre toplam 16 register vardır. Bu registerlerin görevi içerisinde çeşitli bilgileri tutmaktır. Gerektiğinde işlemci buradaki değerleri kullanarak istenilen görevleri yerine getirir.</p>
+                    <p>Farklı büyüklüklerde veriler tutmak için registerler 8, 16, 32 ve 64 bit uzunluğunda olabilirler.</p>
+                    <br>
+                    <table>
+                        <tr>
+                            <td>32 Bit</td>
+                            <td>EAX, EBX, ECX, EDX, EBP, ESP, ESI, EDI, EIP, EFLAGS</td>
+                        </tr>
+                        <tr>
+                            <td>16 Bit</td>
+                            <td>AX, BX, CX, DX, BP, SP, SI, DI, CS, DS, SS, ES, FS, GS</td>
+                        </tr>
+                        <tr>
+                            <td>8 Bit</td>
+                            <td>AH, AL, BH, BL, CH, CL, DH, DL</td>
+                        </tr>
+                    </table>
+                    <br>
+                    <p>Bu registerler ihtiyaca göre kullanılmaktadır ancak burada dikkat etmemiz gereken yer bazı registerlerin aslında aynı adres alanını gösterdiğidir.</p>
+                    <figure>
+                        <img src="../../assets/posts/assembly_programing/EAXEBXECX.png">
+                    </figure>
+
+                    <p>Örnek olarak yukarıdaki resimde 32 bitlik eax registerinin sağ taraftan ilk 16 biti ax registeri ile gösterilmektedir. Aynı şekilde ax registeri ah ve al olmak üzre iki parçaya bölünmektedir. Bu yapıda dikkat etmemiz gereken kısım biz ax registerinde bir veri tutuyorsak ve daha sonra eax registerine farklı bir veri yazarsak ax registerinde tutulan veriyi kaybederiz.</p>
+
+                    <h3>Registerlerin Kullanım Amacı</h3>
+                    <p>AX : Genel amaçlı registerlerdendir, akümülatör registeri olarak bilinir, dört işlemlerde ve veri taşımada kullanılır.</p>
+                    <p>BX : Genel amaçlı registerlerdendir, base register olarak bilinir, bellek üzerinde bir adresi göstermek için kullanılır.</p>
+                    <p>CX : Genel amaçlı registerlerdendir, counter registeri olarak bilinir, döngülerde sayaç olarak kullanılır.</p>
+                    <p>DX : Genel amaçlı registerlerdendir, data register olarak bilinir, donanım ile yapılan giriş çıkışlarda kullanılır.</p>
+                    <p>CS : Segment registerlerindendir, code segment olarak bilinir, yazılan kodlar burada tutulur.</p>
+                    <p>DS : Segment registerleridir, data segment olarak bilinir, değişkenler ve stringler burada tutulur.</p>
+                    <p>SS : Segment registeridir, stack segment olarak bilinir. bir fonksiyona gönderilen parametreler, kaybedilmek istenmeyen veriler burada tutulur, LİFO mantığı ile çalışır, son verinin adresi SP registerinde tutulur.</p>
+                    <p>ES : Segment registerlerindendir, ekstra segment registeri olarak bilinir, DS ile aynıdır ancak fazladan bazı komutlar işlenmesi sırasında burayı kullanır.</p>
+                    <p>FS/GS : Segmet registerleridir, ihityaç duyulması halinde DS yerine kullanılır.</p>
+                    <p>BP : Pointer registerlerindendir, base pointer olarak bilinir, SS’in başlangıç noktasını belirtir.</p>
+                    <p>SP : Pointer registeridir, stack pointer olarak bilinir, SS de bulunan son verinin adresini tutar.</p>
+                    <p>SI : Pointer registerlerindendir, source index olarak bilinir, verileri göstermek için kullanılır.</p>
+                    <p>DI : Pointer registerlerindendir, destination index olarak bilinir SI ile aynı işlemleri yapar tek farkı birisi kaynağı birisi hedefi gösterir, örnek olarak bazı komutlar SI da gösterilen veriyi DI da gösterilen adrese taşır.</p>
+                    <p>IP : Pointer registeridir, instruction pointer olarak bilinir, CS içerisinde işlenecek olan bir sonraki komutun adresini tutar</p>
+                    <p>EFLAGS : Bu register 32 bitliktir ve bazı komutların işlenmesi sonucunda içerisindeki flag değerleri set edilerek yapılan işlemin sonucu hakkında bilgi verir. Bu bilgiler doğrultusunda programın karar yapıları çalışır. Genel olarak aritmetik işlemler sonucunda set edilirler.</p>
+                    
+                    
+                    <p>Aşağıda hangi registerlerin birlikte kullanılacağı gösterilmiştir.</p>
+                    
+                    <ol>
+                        <li>CS -> IP </li>
+                        <li>DS -> SI </li>
+                        <li>DS -> DI </li>
+                        <li>SS -> BP </li>
+                        <li>SS -> SP </li>
+                    </ol>
+
+
+                </div>
+            </section>
+        </div>
+    </body>
+</html>
